@@ -1,5 +1,4 @@
 ﻿//@CodeCopy
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SEContactManager.Logic.Contracts;
 
 namespace SEContactManager.Logic.DataContext
@@ -35,14 +34,34 @@ namespace SEContactManager.Logic.DataContext
 
         #endregion properties
 
-        #region methods
+        #region overridables
+        /// <summary>
+        /// Copies properties from the source entity to the target entity.
+        /// </summary>
+        /// <param name="target">The target entity.</param>
+        /// <param name="source">The source entity.</param>
         protected abstract void CopyProperties(TEntity target, TEntity source);
 
-        protected virtual void BeforeAdding(TEntity entity)
-        {
+        /// <summary>
+        /// Performs actions before adding an entity.
+        /// </summary>
+        /// <param name="entity">The entity to be added.</param>
+        protected virtual void BeforeAdding(TEntity entity) { }
 
-        }
+        /// <summary>
+        /// Performs actions before updating an entity.
+        /// </summary>
+        /// <param name="entity">The entity to be updated.</param>
+        protected virtual void BeforeUpdating(TEntity entity) { }
 
+        /// <summary>
+        /// Performs actions before removing an entity.
+        /// </summary>
+        /// <param name="entity">The entity to be removed.</param>
+        protected virtual void BeforeRemoving(TEntity entity) { }
+        #endregion ovveridables
+
+        #region methods
         /// <summary>
         /// Creates a new instance of the entity.
         /// </summary>
@@ -84,6 +103,8 @@ namespace SEContactManager.Logic.DataContext
         /// <returns>The updated entity, or null if the entity was not found.</returns>
         public virtual TEntity? Update(int id, TEntity entity)
         {
+            BeforeUpdating(entity);
+
             var existingEntity = DbSet.Find(id);
             if (existingEntity != null)
             {
@@ -100,6 +121,8 @@ namespace SEContactManager.Logic.DataContext
         /// <returns>A task that represents the asynchronous operation. The task result contains the updated entity, or null if the entity was not found.</returns>
         public virtual async Task<TEntity?> UpdateAsync(int id, TEntity entity)
         {
+            BeforeUpdating(entity);
+
             var existingEntity = await DbSet.FindAsync(id).ConfigureAwait(false);
             if (existingEntity != null)
             {
@@ -116,8 +139,10 @@ namespace SEContactManager.Logic.DataContext
         public virtual TEntity? Remove(int id)
         {
             var entity = DbSet.Find(id);
+
             if (entity != null)
             {
+                BeforeRemoving(entity);
                 DbSet.Remove(entity);
             }
             return entity;

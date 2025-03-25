@@ -62,6 +62,8 @@
 			<DataGrid.Columns>
 				<DataGridTextColumn Header="Vorname" Binding="{Binding FirstName}" />
 				<DataGridTextColumn Header="Nachname" Binding="{Binding LastName}" />
+				<DataGridTextColumn Header="Email" Binding="{Binding Email}" />
+				<DataGridTextColumn Header="Phone" Binding="{Binding PhoneNumber}" />
 				<DataGridTemplateColumn Width="Auto" Header="Actions">
 					<DataGridTemplateColumn.CellTemplate>
 						<DataTemplate>

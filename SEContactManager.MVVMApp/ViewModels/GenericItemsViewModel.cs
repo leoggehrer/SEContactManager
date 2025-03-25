@@ -47,7 +47,19 @@ namespace SEContactManager.MVVMApp.ViewModels
                 OnPropertyChanged();
             }
         }
-        public virtual ObservableCollection<TModel> Models { get; } = [];
+        public virtual ObservableCollection<TModel> Models 
+        {
+            get
+            {
+                var result = new ObservableCollection<TModel>();
+
+                foreach (var model in _models)
+                {
+                    result.Add(model);
+                }
+                return result;
+            }
+        }
         #endregion properties
 
         public GenericItemsViewModel()
@@ -142,6 +154,7 @@ namespace SEContactManager.MVVMApp.ViewModels
                         Models.Add(model);
                     }
                 }
+                OnPropertyChanged(nameof(Models));
                 if (selectedItem != null)
                 {
                     SelectedItem = Models.FirstOrDefault(e => e.Id == selectedItem.Id);

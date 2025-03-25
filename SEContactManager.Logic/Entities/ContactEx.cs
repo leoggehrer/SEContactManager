@@ -18,12 +18,6 @@
             {
                 throw new Exception("LastName is to short!");
             }
-
-
-        }
-        public override string ToString()
-        {
-            return $"{LastName} {FirstName}";
         }
     }
 }

@@ -23,12 +23,8 @@ namespace SEContactManager.MVVMApp.ViewModels
         public Action? CloseAction { get; set; }
         public TModel Model
         {
-            get => model ??= new();
-            set
-            {
-                model = value;
-                OnPropertyChanged(nameof(Model));
-            }
+            get => model;
+            set => model = value ?? new();
         }
         #endregion properties
 
@@ -66,7 +62,7 @@ namespace SEContactManager.MVVMApp.ViewModels
                         var mainWindow = (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
 
                         await messageDialog.ShowDialog(mainWindow!);
-                        Console.WriteLine($"Fehler beim Abrufen der von {RequestUri}. Status: {response.StatusCode}");
+                        Console.WriteLine($"Fehler beim Abrufen von {RequestUri}. Status: {response.StatusCode}");
                     }
                 }
                 else

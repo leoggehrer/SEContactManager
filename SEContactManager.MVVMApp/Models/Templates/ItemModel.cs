@@ -1,0 +1,8 @@
+﻿//@CodeCopy
+namespace SEContactManager.MVVMApp.Models.Templates
+{
+    public partial class ItemModel : ModelObject
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+}

@@ -1,0 +1,75 @@
+﻿//@GeneratedCode
+@startuml SEContactManager.Logic.Entities.Contact
++class Contact #whitesmoke {
+    - String _firstName
+    - String _lastName
+    - String _email
+    - String _phoneNumber
+    ---
+     + String getFirstName()
+     + setFirstName(String value)
+     + String getLastName()
+     + setLastName(String value)
+     + String getEmail()
+     + setEmail(String value)
+     + String getPhoneNumber()
+     + setPhoneNumber(String value)
+    ---
+    + {static}Void Validate(Contact contact)
+    ---
+    + String get_FirstName()
+    + Void set_FirstName(String value)
+    + String get_LastName()
+    + Void set_LastName(String value)
+    + String get_Email()
+    + Void set_Email(String value)
+    + String get_PhoneNumber()
+    + Void set_PhoneNumber(String value)
+    + IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    + String ToString()
+}
++abstract class EntityObject #white {
+    - Int32 _id
+    ---
+     + Int32 getId()
+     + setId(Int32 value)
+    ---
+    + Int32 get_Id()
+    + Void set_Id(Int32 value)
+}
+interface IValidatableObject #lightgrey {
+    + IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+}
+interface IContact #lightgrey {
+     + String getFirstName()
+     + setFirstName(String value)
+     + String getLastName()
+     + setLastName(String value)
+     + String getEmail()
+     + setEmail(String value)
+     + String getPhoneNumber()
+     + setPhoneNumber(String value)
+    ---
+    + String get_FirstName()
+    + Void set_FirstName(String value)
+    + String get_LastName()
+    + Void set_LastName(String value)
+    + String get_Email()
+    + Void set_Email(String value)
+    + String get_PhoneNumber()
+    + Void set_PhoneNumber(String value)
+    + Void CopyProperties(IContact other)
+}
+interface IIdentifiable #lightgrey {
+     + Int32 getId()
+     + setId(Int32 value)
+    ---
+    + Int32 get_Id()
+    + Void set_Id(Int32 value)
+}
+EntityObject <|-- Contact
+IIdentifiable <|.. IContact
+IValidatableObject ()- Contact
+IContact ()- Contact
+IIdentifiable ()- EntityObject
+@enduml

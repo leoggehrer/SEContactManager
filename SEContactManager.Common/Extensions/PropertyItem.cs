@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 using System.Reflection;
 
 namespace SEContactManager.Common.Extensions
@@ -84,4 +84,4 @@ namespace SEContactManager.Common.Extensions
         public Dictionary<string, PropertyItem> PropertyItems { get; private set; } = [];
     }
 }
-//MdEnd
+

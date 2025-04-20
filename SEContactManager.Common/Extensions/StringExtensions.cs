@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 using System.Security.Cryptography;
 using System.Text;
 
@@ -1168,4 +1168,4 @@ namespace SEContactManager.Common.Extensions
         }
     }
 }
-//MdEnd
+

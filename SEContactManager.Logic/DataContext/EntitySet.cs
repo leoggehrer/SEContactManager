@@ -1,5 +1,6 @@
 ﻿//@CodeCopy
 using SEContactManager.Logic.Contracts;
+using System.Reflection;
 
 namespace SEContactManager.Logic.DataContext
 {
@@ -9,11 +10,11 @@ namespace SEContactManager.Logic.DataContext
     /// <typeparam name="TEntity">The type of the entity.</typeparam>
     /// <param name="context">The database context.</param>
     /// <param name="dbSet">The set of entities.</param>
-    public abstract class EntitySet<TEntity>(DbContext context, DbSet<TEntity> dbSet) : IEntitySet<TEntity>, IDisposable
+    internal abstract partial class EntitySet<TEntity>(ProjectDbContext context, DbSet<TEntity> dbSet) : IEntitySet<TEntity>, IDisposable
         where TEntity : Entities.EntityObject, new()
     {
         #region fields
-        private DbContext? _context = context;
+        private ProjectDbContext? _context = context;
         private DbSet<TEntity>? _dbSet = dbSet;
         #endregion fields
 
@@ -21,45 +22,12 @@ namespace SEContactManager.Logic.DataContext
         /// <summary>
         /// Gets the database context.
         /// </summary>
-        internal DbContext Context => _context!;
+        internal ProjectDbContext Context => _context!;
         /// <summary>
         /// Gets the database context.
         /// </summary>
         protected DbSet<TEntity> DbSet => _dbSet!;
-
-        /// <summary>
-        /// Gets the queryable set of entities.
-        /// </summary>
-        public IQueryable<TEntity> QuerySet => DbSet.AsQueryable();
-
         #endregion properties
-
-        #region overridables
-        /// <summary>
-        /// Copies properties from the source entity to the target entity.
-        /// </summary>
-        /// <param name="target">The target entity.</param>
-        /// <param name="source">The source entity.</param>
-        protected abstract void CopyProperties(TEntity target, TEntity source);
-
-        /// <summary>
-        /// Performs actions before adding an entity.
-        /// </summary>
-        /// <param name="entity">The entity to be added.</param>
-        protected virtual void BeforeAdding(TEntity entity) { }
-
-        /// <summary>
-        /// Performs actions before updating an entity.
-        /// </summary>
-        /// <param name="entity">The entity to be updated.</param>
-        protected virtual void BeforeUpdating(TEntity entity) { }
-
-        /// <summary>
-        /// Performs actions before removing an entity.
-        /// </summary>
-        /// <param name="entity">The entity to be removed.</param>
-        protected virtual void BeforeRemoving(TEntity entity) { }
-        #endregion ovveridables
 
         #region methods
         /// <summary>
@@ -68,7 +36,65 @@ namespace SEContactManager.Logic.DataContext
         /// <returns>A new instance of the entity.</returns>
         public virtual TEntity Create()
         {
-            return new TEntity();
+            BeforeAccessing(MethodBase.GetCurrentMethod()!);
+
+            return ExecuteCreate();
+        }
+
+        /// <summary>
+        /// Returns the count of entities in the set.
+        /// </summary>
+        /// <returns>The count of entities.</returns>
+        public virtual int Count()
+        {
+            BeforeAccessing(MethodBase.GetCurrentMethod()!);
+
+            return ExecuteCount();
+        }
+
+        /// <summary>
+        /// Returns the count of entities in the set asynchronously.
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the count of entities.</returns>
+        public virtual Task<int> CountAsync()
+        {
+            BeforeAccessing(MethodBase.GetCurrentMethod()!.GetAsyncOriginal());
+
+            return ExecuteCountAsync();
+        }
+
+        /// <summary>
+        /// Gets the queryable set of entities.
+        /// </summary>
+        /// <returns>An <see cref="IQueryable{TEntity}"/> that can be used to query the set of entities.</returns>
+        public virtual IQueryable<TEntity> AsQuerySet()
+        {
+            BeforeAccessing(MethodBase.GetCurrentMethod()!);
+
+            return ExecuteAsQuerySet();
+        }
+
+        /// <summary>
+        /// Returns an <see cref="IQueryable{TEntity}"/> that can be used to query the set of entities without tracking changes.
+        /// </summary>
+        /// <returns>An <see cref="IQueryable{TEntity}"/> that can be used to query the set of entities without tracking changes.</returns>
+        public virtual IQueryable<TEntity> AsNoTrackingSet()
+        {
+            BeforeAccessing(MethodBase.GetCurrentMethod()!);
+
+            return ExecuteAsNoTrackingSet();
+        }
+
+        /// <summary>
+        /// Returns the element of type T with the identification of id.
+        /// </summary>
+        /// <param name="id">The identification.</param>
+        /// <returns>The element of the type T with the corresponding identification.</returns>
+        public virtual ValueTask<TEntity?> GetByIdAsync(IdType id)
+        {
+            BeforeAccessing(MethodBase.GetCurrentMethod()!.GetAsyncOriginal());
+
+            return ExecuteGetByIdAsync(id);
         }
 
         /// <summary>
@@ -78,8 +104,21 @@ namespace SEContactManager.Logic.DataContext
         /// <returns>The added entity.</returns>
         public virtual TEntity Add(TEntity entity)
         {
-            BeforeAdding(entity);
-            return DbSet.Add(entity).Entity;
+            BeforeAccessing(MethodBase.GetCurrentMethod()!);
+
+            return ExecuteAdd(entity);
+        }
+
+        /// <summary>
+        /// Adds a range of entities to the set.
+        /// </summary>
+        /// <param name="entities">The collection of entities to add.</param>
+        /// <returns>The added entities.</returns>
+        public virtual IEnumerable<TEntity> AddRange(IEnumerable<TEntity> entities)
+        {
+            BeforeAccessing(MethodBase.GetCurrentMethod()!);
+
+            return ExecuteAddRange(entities);
         }
 
         /// <summary>
@@ -87,12 +126,23 @@ namespace SEContactManager.Logic.DataContext
         /// </summary>
         /// <param name="entity">The entity to add.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the added entity.</returns>
-        public virtual async Task<TEntity> AddAsync(TEntity entity)
+        public virtual Task<TEntity> AddAsync(TEntity entity)
         {
-            BeforeAdding(entity);
-            var result = await DbSet.AddAsync(entity).ConfigureAwait(false);
+            BeforeAccessing(MethodBase.GetCurrentMethod()!.GetAsyncOriginal());
 
-            return result.Entity;
+            return ExecuteAddAsync(entity);
+        }
+
+        /// <summary>
+        /// Asynchronously adds a range of entities to the set.
+        /// </summary>
+        /// <param name="entities">The collection of entities to add.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the added entities.</returns>
+        public virtual Task<IEnumerable<TEntity>> AddRangeAsync(IEnumerable<TEntity> entities)
+        {
+            BeforeAccessing(MethodBase.GetCurrentMethod()!.GetAsyncOriginal());
+
+            return ExecuteAddRangeAsync(entities);
         }
 
         /// <summary>
@@ -101,16 +151,11 @@ namespace SEContactManager.Logic.DataContext
         /// <param name="id">The identifier of the entity to update.</param>
         /// <param name="entity">The entity with updated values.</param>
         /// <returns>The updated entity, or null if the entity was not found.</returns>
-        public virtual TEntity? Update(int id, TEntity entity)
+        public virtual TEntity? Update(IdType id, TEntity entity)
         {
-            BeforeUpdating(entity);
+            BeforeAccessing(MethodBase.GetCurrentMethod()!);
 
-            var existingEntity = DbSet.Find(id);
-            if (existingEntity != null)
-            {
-                CopyProperties(existingEntity, entity);
-            }
-            return existingEntity;
+            return ExecuteUpdate(id, entity);
         }
 
         /// <summary>
@@ -119,16 +164,23 @@ namespace SEContactManager.Logic.DataContext
         /// <param name="id">The identifier of the entity to update.</param>
         /// <param name="entity">The entity with updated values.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the updated entity, or null if the entity was not found.</returns>
-        public virtual async Task<TEntity?> UpdateAsync(int id, TEntity entity)
+        public virtual Task<TEntity?> UpdateAsync(IdType id, TEntity entity)
         {
-            BeforeUpdating(entity);
+            BeforeAccessing(MethodBase.GetCurrentMethod()!.GetAsyncOriginal());
 
-            var existingEntity = await DbSet.FindAsync(id).ConfigureAwait(false);
-            if (existingEntity != null)
-            {
-                CopyProperties(existingEntity, entity);
-            }
-            return existingEntity;
+            return ExecuteUpdateAsync(id, entity);
+        }
+
+        /// <summary>
+        /// Removes the specified entity from the set.
+        /// </summary>
+        /// <param name="entity">The entity to remove.</param>
+        /// <returns>The removed entity, or null if the entity was not found.</returns>
+        public virtual TEntity? Remove(TEntity entity)
+        {
+            BeforeAccessing(MethodBase.GetCurrentMethod()!);
+
+            return Remove(entity.Id);
         }
 
         /// <summary>
@@ -136,16 +188,11 @@ namespace SEContactManager.Logic.DataContext
         /// </summary>
         /// <param name="id">The identifier of the entity to remove.</param>
         /// <returns>The removed entity, or null if the entity was not found.</returns>
-        public virtual TEntity? Remove(int id)
+        public virtual TEntity? Remove(IdType id)
         {
-            var entity = DbSet.Find(id);
+            BeforeAccessing(MethodBase.GetCurrentMethod()!);
 
-            if (entity != null)
-            {
-                BeforeRemoving(entity);
-                DbSet.Remove(entity);
-            }
-            return entity;
+            return ExecuteRemove(id);
         }
 
         /// <summary>
@@ -158,5 +205,13 @@ namespace SEContactManager.Logic.DataContext
             GC.SuppressFinalize(this);
         }
         #endregion methods
+
+        #region partial methods
+        /// <summary>
+        /// Method that is called before accessing any method in the EntitySet class.
+        /// </summary>
+        /// <param name="methodBase">The method that is being accessed.</param>
+        partial void BeforeAccessing(MethodBase methodBase);
+        #endregion partial methods
     }
 }

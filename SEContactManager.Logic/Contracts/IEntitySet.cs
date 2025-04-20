@@ -16,9 +16,28 @@ namespace SEContactManager.Logic.Contracts
         TEntity Create();
 
         /// <summary>
-        /// Gets the queryable set of entities.
+        /// Gets the count of entities in the set.
         /// </summary>
-        IQueryable<TEntity> QuerySet { get; }
+        /// <returns>The count of entities in the set.</returns>
+        int Count();
+
+        /// <summary>
+        /// Asynchronously gets the count of entities in the set.
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the count of entities in the set.</returns>
+        Task<int> CountAsync();
+
+        /// <summary>
+        /// Returns an <see cref="IQueryable{TEntity}"/> that can be used to query the set of entities.
+        /// </summary>
+        /// <returns>An <see cref="IQueryable{TEntity}"/> that can be used to query the set of entities.</returns>
+        IQueryable<TEntity> AsQuerySet();
+
+        /// <summary>
+        /// Returns an <see cref="IQueryable{TEntity}"/> that can be used to query the set of entities without tracking changes.
+        /// </summary>
+        /// <returns>An <see cref="IQueryable{TEntity}"/> that can be used to query the set of entities without tracking changes.</returns>
+        IQueryable<TEntity> AsNoTrackingSet();
 
         /// <summary>
         /// Adds a new entity to the set.
@@ -28,33 +47,32 @@ namespace SEContactManager.Logic.Contracts
         TEntity Add(TEntity entity);
 
         /// <summary>
+        /// Adds a range of new entities to the set.
+        /// </summary>
+        /// <param name="entities">The collection of entities to add.</param>
+        /// <returns>The added entities.</returns>
+        IEnumerable<TEntity> AddRange(IEnumerable<TEntity> entities);
+
+        /// <summary>
         /// Asynchronously adds a new entity to the set.
         /// </summary>
         /// <param name="entity">The entity to add.</param>
         /// <returns>A task that represents the asynchronous operation. The task result contains the added entity.</returns>
         Task<TEntity> AddAsync(TEntity entity);
-        /// <summary>
-        /// Updates an entity in the set by its identifier.
-        /// </summary>
-        /// <param name="id">The identifier of the entity to update.</param>
-        /// <param name="entity">The updated entity.</param>
-        /// <returns>The updated entity, or null if the entity was not found.</returns>
-        TEntity? Update(int id, TEntity entity);
 
         /// <summary>
-        /// Asynchronously updates an entity in the set by its identifier.
+        /// Asynchronously adds a range of new entities to the set.
         /// </summary>
-        /// <param name="id">The identifier of the entity to update.</param>
-        /// <param name="entity">The updated entity.</param>
-        /// <returns>A task that represents the asynchronous operation. The task result contains the updated entity, or null if the entity was not found.</returns>
-        Task<TEntity?> UpdateAsync(int id, TEntity entity);
+        /// <param name="entities">The collection of entities to add.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains the added entities.</returns>
+        Task<IEnumerable<TEntity>> AddRangeAsync(IEnumerable<TEntity> entities);
 
         /// <summary>
-        /// Removes an entity from the set by its identifier.
+        /// Removes the specified entity from the set.
         /// </summary>
-        /// <param name="id">The identifier of the entity to remove.</param>
+        /// <param name="entity">The entity to remove.</param>
         /// <returns>The removed entity, or null if the entity was not found.</returns>
-        TEntity? Remove(int id);
+        TEntity? Remove(TEntity entity);
 
         /// <summary>
         /// Disposes the entity set.

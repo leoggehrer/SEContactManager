@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace SEContactManager.Common.Extensions
 {
     /// <summary>
@@ -18,4 +18,3 @@ namespace SEContactManager.Common.Extensions
         public int EndPosition { get; set; }
     }
 }
-//MdEnd

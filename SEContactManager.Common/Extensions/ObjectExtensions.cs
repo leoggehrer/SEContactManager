@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 using System.Reflection;
 
 namespace SEContactManager.Common.Extensions
@@ -388,4 +388,4 @@ namespace SEContactManager.Common.Extensions
         }
     }
 }
-//MdEnd
+

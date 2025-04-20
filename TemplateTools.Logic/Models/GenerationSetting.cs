@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace TemplateTools.Logic.Models
 {
     /// <summary>
@@ -53,4 +53,4 @@ namespace TemplateTools.Logic.Models
         }
     }
 }
-//MdEnd
+

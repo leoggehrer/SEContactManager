@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace TemplateTools.Logic.Extensions
 {
     /// <summary>
@@ -238,4 +238,4 @@ namespace TemplateTools.Logic.Extensions
         }
     }
 }
-//MdEnd
+

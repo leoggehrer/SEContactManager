@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 using System.Reflection;
 
 namespace TemplateTools.Logic.Generation
@@ -39,6 +39,10 @@ namespace TemplateTools.Logic.Generation
         /// Gets the common project name.
         ///</summary>
         public string CommonProject => $"{SolutionName}{StaticLiterals.CommonExtension}";
+        /// <summary>
+        /// Gets the logic project name.
+        ///</summary>
+        public string LogicProject => $"{SolutionName}{StaticLiterals.LogicExtension}";
 
         #region solution properties
         /// <summary>
@@ -70,6 +74,12 @@ namespace TemplateTools.Logic.Generation
         /// <returns>The entity set name.</returns>
         public static string CreateEntitySetName(Type type) => $"{CreateEntityName(type)}Set";
         /// <summary>
+        /// Creates the view set name from the type.
+        /// </summary>
+        /// <param name="type">The entity type.</param>
+        /// <returns>The view set name.</returns>
+        public static string CreateViewSetName(Type type) => $"{CreateEntityName(type)}Set";
+        /// <summary>
         /// Creates the contract set name from the type.
         /// </summary>
         /// <param name="type">The entity type.</param>
@@ -92,22 +102,22 @@ namespace TemplateTools.Logic.Generation
             return $"{CreateModelName(type)}Edit";
         }
         /// <summary>
-        /// Creates the name of the view model based on the provided type.
+        /// Creates the item name of the view model based on the provided type.
         /// </summary>
         /// <param name="type">The type used to create the view model name.</param>
         /// <returns>The view model name.</returns>
-        public static string CreateViewModelName(Type type)
+        public static string CreateItemViewModelName(Type type)
         {
             return $"{CreateModelName(type)}ViewModel";
         }
         /// <summary>
-        /// Creates the model contract name for a given type.
+        /// Creates the items name of the view model based on the provided type.
         /// </summary>
-        /// <param name="type">The type for which the model contract name needs to be created.</param>
-        /// <returns>The model contract name in the format "I{type.Name}".</returns>
-        public static string CreateModelContractName(Type type)
+        /// <param name="type">The type used to create the view model name.</param>
+        /// <returns>The view model name.</returns>
+        public static string CreateItemsViewModelName(Type type)
         {
-            return $"I{type.Name}";
+            return $"{CreateModelName(type).CreatePluralWord()}ViewModel";
         }
         #endregion item names
 
@@ -263,7 +273,7 @@ namespace TemplateTools.Logic.Generation
         /// <summary>
         /// This method creates the model sub namespace from a project type.
         /// For example:
-        ///     FullName QuickTemplate.Logic.Entities.Base.Artist becomes SubName Models.Base.Artist.
+        ///     FullName SEContactManager.Logic.Entities.Base.Artist becomes SubName Models.Base.Artist.
         /// </summary>
         /// <param name="type">The Type from which the subnamespace is created.</param>
         /// <returns>The subnamespace as a string.</returns>
@@ -283,19 +293,93 @@ namespace TemplateTools.Logic.Generation
 
                 result = string.Join('.', namespaceItems);
             }
+            else if (IsViewType(type))
+            {
+                var namespaceItems = CreateModuleSubNamespaceItems(type, StaticLiterals.ModelsFolder);
+
+                result = string.Join('.', namespaceItems);
+            }
+            return result;
+        }
+        /// <summary>
+        /// Gets the default visibility for the specified type.
+        /// </summary>
+        /// <param name="type">The type for which to get the default visibility.</param>
+        /// <returns>
+        /// A string representing the default visibility of the type.
+        /// Returns "internal" if the type is a system entity; otherwise, returns "public".
+        /// </returns>
+        public static string GetDefaultVisibility(Type type)
+        {
+            return EntityProject.IsSystemEntity(type) ? "internal" : "public";
+        }
+
+        /// <summary>
+        /// Retrieves the base interface for the specified entity type.
+        /// </summary>
+        /// <param name="type">The type of the entity for which the base interface is to be determined.</param>
+        /// <returns>
+        /// A string representing the base interface of the entity type.
+        /// If the entity type has a base type that is not a standard entity or versioned entity,
+        /// the contract name of the base type is returned. Otherwise, a default global identifiable name is returned.
+        /// </returns>
+        public static string GetEntityBaseInterface(Type type)
+        {
+            var baseType = type.BaseType;
+            string result;
+
+            if (baseType != null && baseType.Name.Equals(StaticLiterals.EntityObjectName))
+            {
+                result = $"{StaticLiterals.GlobalUsingIdentifiableName}";
+            }
+            else if (baseType != null && baseType.Name.Equals(StaticLiterals.VersionEntityObjectName))
+            {
+                result = $"{StaticLiterals.GlobalUsingVersionableName}";
+            }
+            else if (baseType != null)
+            {
+                result = $"{CreateContractName(baseType)}";
+            }
+            else
+            {
+                result = $"{StaticLiterals.GlobalUsingIdentifiableName}";
+            }
+
             return result;
         }
         #endregion type items
 
         #region logic items
+        /// <summary>
+        /// Creates the full contract type for the given type.
+        /// </summary>
+        /// <param name="type">The type for which the full contract type needs to be created.</param>
+        /// <returns>The full contract type as a string.</returns>
+        public string CreateFullContractType(Type type)
+        {
+            return EntityProject.IsSystemEntity(type) ? CreateFullLogicContractType(type)
+                                                      : CreateFullCommonContractType(type);
+        }
+        /// <summary>
+        /// Creates the full namespace for the specified type.
+        /// </summary>
+        /// <param name="type">The type for which the namespace is created.</param>
+        /// <param name="preItems">Optional array of pre-defined namespace items.</param>
+        /// <returns>The full namespace.</returns>
+        public string CreateFullNamespace(Type type, params string[] preItems)
+        {
+            return EntityProject.IsSystemEntity(type) ? CreateFullLogicNamespace(type, preItems)
+                                                      : CreateFullCommonNamespace(type, preItems);
+        }
+
         ///<summary>
-        /// Creates the full common model contract type for the given type.
+        /// Creates the full common contract type for the given type.
         ///</summary>
         ///<param name="type">The type for which the full common model contract type needs to be created.</param>
         ///<returns>The full logic model contract type.</returns>
-        public string CreateFullCommonModelContractType(Type type)
+        public string CreateFullCommonContractType(Type type)
         {
-            return CreateFullCommonType(type, CreateModelContractName(type), StaticLiterals.ContractsFolder);
+            return CreateFullCommonType(type, CreateContractName(type), StaticLiterals.ContractsFolder);
         }
         /// <summary>
         /// Creates the full common type by combining the common namespace, type name, and any optional pre-items.
@@ -308,7 +392,6 @@ namespace TemplateTools.Logic.Generation
         {
             return $"{CreateFullCommonNamespace(type, preItems)}.{typeName}";
         }
-
         /// <summary>
         /// Creates the full common namespace for the specified type.
         /// </summary>
@@ -320,6 +403,39 @@ namespace TemplateTools.Logic.Generation
             var namespaceItems = CreateModuleSubNamespaceItems(type, preItems);
 
             return $"{CommonProject}.{string.Join('.', namespaceItems)}";
+        }
+
+        ///<summary>
+        /// Creates the full common contract type for the given type.
+        ///</summary>
+        ///<param name="type">The type for which the full common model contract type needs to be created.</param>
+        ///<returns>The full logic model contract type.</returns>
+        public string CreateFullLogicContractType(Type type)
+        {
+            return CreateFullLogicType(type, CreateContractName(type), StaticLiterals.ContractsFolder);
+        }
+        /// <summary>
+        /// Creates the full common type by combining the common namespace, type name, and any optional pre-items.
+        /// </summary>
+        /// <param name="type">The type of the logic.</param>
+        /// <param name="typeName">The name of the type.</param>
+        /// <param name="preItems">Optional pre-items to be included in the full logic type.</param>
+        /// <returns>The full logic type as a string.</returns>
+        public string CreateFullLogicType(Type type, string typeName, params string[] preItems)
+        {
+            return $"{CreateFullLogicNamespace(type, preItems)}.{typeName}";
+        }
+        /// <summary>
+        /// Creates the full common namespace for the specified type.
+        /// </summary>
+        /// <param name="type">The type for which the logic namespace is created.</param>
+        /// <param name="preItems">Optional array of pre-defined namespace items.</param>
+        /// <returns>The full logic namespace.</returns>
+        public string CreateFullLogicNamespace(Type type, params string[] preItems)
+        {
+            var namespaceItems = CreateModuleSubNamespaceItems(type, preItems);
+
+            return $"{LogicProject}.{string.Join('.', namespaceItems)}";
         }
         #endregion logic items
 
@@ -413,7 +529,7 @@ namespace TemplateTools.Logic.Generation
         }
         #endregion subType items
 
-        #region contract properties
+        #region path
         /// <summary>
         /// Creates a sub file path.
         /// </summary>
@@ -427,7 +543,6 @@ namespace TemplateTools.Logic.Generation
 
             return $"{string.Join(Path.DirectorySeparatorChar, namespaceItems!.Union([fileName]))}";
         }
-        #endregion contract properties
 
         /// <summary>
         /// Diese Methode ermittelt den Teilnamensraum von einem Typ.
@@ -527,6 +642,7 @@ namespace TemplateTools.Logic.Generation
             }
             return preItems.Union(result);
         }
+        #endregion paths
 
         #region type infos
         /// <summary>
@@ -565,7 +681,7 @@ namespace TemplateTools.Logic.Generation
         public static bool IsListType(Type type)
         {
             return type.FullName!.StartsWith("System.Collections.Generic.List")
-            || type.FullName!.StartsWith("System.Collections.Generic.IList");
+                || type.FullName!.StartsWith("System.Collections.Generic.IList");
         }
         /// <summary>
         /// Determines whether the given type is an entity type.
@@ -577,6 +693,17 @@ namespace TemplateTools.Logic.Generation
         public static bool IsEntityType(Type type)
         {
             return type.GetBaseTypes().FirstOrDefault(t => t.Name.Equals(StaticLiterals.EntityObjectName)) != null;
+        }
+        /// <summary>
+        /// Determines whether the given type is an view type.
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns>
+        /// <c>true</c> if the given type is an entity type; otherwise, <c>false</c>.
+        /// </returns>
+        public static bool IsViewType(Type type)
+        {
+            return type.GetBaseTypes().FirstOrDefault(t => t.Name.Equals(StaticLiterals.ViewObjectName)) != null;
         }
         /// <summary>
         /// Checks if the specified type is a List type containing entities.
@@ -596,6 +723,45 @@ namespace TemplateTools.Logic.Generation
             return result;
         }
         /// <summary>
+        /// Checks if the specified type is a Array type containing entities.
+        /// </summary>
+        /// <param name="type">The type to be checked.</param>
+        /// <returns>True if the type is a Array type containing entities, otherwise false.</returns>
+        public static bool IsEntityArrayType(Type type)
+        {
+            var result = false;
+
+            if (IsArrayType(type))
+            {
+                var arrayType = type.GetElementType();
+
+                result = arrayType != default && IsEntityType(arrayType);
+            }
+            return result;
+        }
+        /// <summary>
+        /// Determines whether the specified property is an array of primitive types.
+        /// </summary>
+        /// <param name="propertyInfo">The property information to check.</param>
+        /// <returns>
+        /// <c>true</c> if the property is an array and its element type is a primitive type; otherwise, <c>false</c>.
+        /// </returns>
+        public static bool IsPrimitiveArrayType(PropertyInfo propertyInfo)
+        {
+            return IsPrimitiveArrayType(propertyInfo.PropertyType);
+        }
+        /// <summary>
+        /// Determines whether the specified type is an array of primitive types.
+        /// </summary>
+        /// <param name="type">The type to check.</param>
+        /// <returns>
+        /// <c>true</c> if the specified type is an array and its element type is a primitive type; otherwise, <c>false</c>.
+        /// </returns>
+        public static bool IsPrimitiveArrayType(Type type)
+        {
+            return IsArrayType(type) && type.GetElementType()!.IsPrimitive;
+        }
+        /// <summary>
         /// Determines whether the specified Type is a model type.
         /// </summary>
         /// <param name="type">The Type to be checked.</param>
@@ -604,21 +770,7 @@ namespace TemplateTools.Logic.Generation
         {
             return type.GetBaseTypes().FirstOrDefault(t => t.Name.Equals(StaticLiterals.ModelObjectName)) != null;
         }
-        /// <summary>
-        /// Determines if a given string represents a model type.
-        /// </summary>
-        /// <param name="strType">The string type to be checked.</param>
-        /// <returns>True if the string type contains the specified ModelsFolder; otherwise, false.</returns>
-        public static bool IsModelType(string strType)
-        {
-            return strType.Contains($".{StaticLiterals.ModelsFolder}.");
-        }
-        /// <summary>
-        /// Determines if the specified type is a service model type.
-        /// </summary>
-        /// <param name="type">The type to check.</param>
-        /// <returns>true if the specified type is a service model type; otherwise, false.</returns>
         #endregion type infos
     }
 }
-//MdEnd
+

@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 using TemplateTools.Logic.Common;
 using TemplateTools.Logic.Contracts;
 using TemplateTools.Logic.Models;
@@ -69,4 +69,3 @@ namespace TemplateTools.Logic.Generation
         }
     }
 }
-//MdEnd

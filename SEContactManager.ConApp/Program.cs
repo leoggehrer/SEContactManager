@@ -1,4 +1,6 @@
 ﻿//@CodeCopy
+using System.Reflection;
+
 namespace SEContactManager.ConApp
 {
     internal partial class Program
@@ -9,7 +11,7 @@ namespace SEContactManager.ConApp
         static void Main(/*string[] args*/)
         {
             string input = string.Empty;
-            using Logic.Contracts.IContext context = Logic.DataContext.Factory.CreateContext();
+            using Logic.Contracts.IContext context = CreateContext();
 
             while (!input.Equals("x", StringComparison.CurrentCultureIgnoreCase))
             {
@@ -19,6 +21,8 @@ namespace SEContactManager.ConApp
                 Console.WriteLine("==========================================");
 
                 Console.WriteLine($"{nameof(InitDatabase),-25}....{index++}");
+
+                CreateMenu(ref index);
 
                 Console.WriteLine();
                 Console.WriteLine($"Exit...............x");
@@ -38,18 +42,65 @@ namespace SEContactManager.ConApp
                             break;
 
                         default:
+                            ExecuteMenuItem(choice, context);
                             break;
                     }
                 }
             }
         }
 
-        public static void InitDatabase()
+        private static Logic.Contracts.IContext CreateContext()
         {
-#if DEBUG
-            Logic.DataContext.Factory.InitDatabase();
+
+#if ACCOUNT_ON
+            Logic.Contracts.IContext? result = null;
+
+            try
+            {
+                Task.Run(async () =>
+                {
+                    var login = await Logic.AccountAccess.LogonAsync(AaEmail, AaPwd, string.Empty);
+
+                    result = Logic.DataContext.Factory.CreateContext(login.SessionToken);
+                    return result;
+                }).Wait();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error in {MethodBase.GetCurrentMethod()!.Name}: {ex.Message}");
+            }
+
+            return result ?? Logic.DataContext.Factory.CreateContext();
+#else
+            return Logic.DataContext.Factory.CreateContext();
 #endif
         }
 
+        public static void InitDatabase()
+        {
+#if DEBUG
+            BeforeInitDatabase();
+            Logic.DataContext.Factory.InitDatabase();
+            AfterInitDatabase();
+#endif
+        }
+
+        static void AfterInitDatabase()
+        {
+#if ACCOUNT_ON
+            CreateAccounts();
+#endif
+            ImportData();
+        }
+
+        #region partial methods
+        static partial void BeforeInitDatabase();
+#if ACCOUNT_ON
+        static partial void CreateAccounts();
+#endif
+        static partial void ImportData();
+        static partial void CreateMenu(ref int index);
+        static partial void ExecuteMenuItem(int choice, Logic.Contracts.IContext context);
+        #endregion partial methods
     }
 }

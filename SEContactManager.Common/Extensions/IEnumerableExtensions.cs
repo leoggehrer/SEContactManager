@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace SEContactManager.Common.Extensions
 {
     /// <summary>
@@ -173,4 +173,4 @@ namespace SEContactManager.Common.Extensions
         }
     }
 }
-//MdEnd
+

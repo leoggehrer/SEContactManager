@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace TemplateTools.Logic
 {
     /// <summary>
@@ -104,37 +104,56 @@ namespace TemplateTools.Logic
         public static string AngularExtension => CommonStaticLiterals.AngularExtension;
         #endregion Project Extensions
 
-        #region items
+        #region Items
+        public static readonly string DbObjectName = "DbObject";
+
         public static readonly string EntityObjectName = "EntityObject";
+        public static readonly string VersionEntityObjectName = "VersionEntityObject";
         public static readonly string EntitySetName = "EntitySet";
+
+        public static readonly string ViewObjectName = "ViewObject";
+        public static readonly string ViewSetName = "ViewSet";
+
         public static readonly string ContextAccessor = "ContextAccessor";
         public static readonly string GenericItemViewModel = "GenericItemViewModel";
+        public static readonly string GenericItemsViewModel = "GenericItemsViewModel";
 
-        public static readonly string ContextContract = "IContext";
+        public static readonly string IdentifiableName = "IIdentifiable";
+        public static readonly string ContextContractName = "IContext";
         public static readonly string EntitySetContractName = "IEntitySet";
-        #endregion items
+        public static readonly string ViewSetContractName = "IViewSet";
+
+        public static readonly string GlobalUsingIdentifiableName = "CommonContracts.IIdentifiable";
+        public static readonly string GlobalUsingVersionableName = "CommonContracts.IVersionable";
+        #endregion Items
 
         #region Entity properties
         public static readonly string IdentityProperty = "Id";
+        public static readonly string ExternalIdentityProperty = "Guid";
         public static readonly string RowVersionProperty = "RowVersion";
 
-        public static readonly string[] IdentityProperties = [IdentityProperty];
-        public static readonly string[] VersionProperties = [IdentityProperty, RowVersionProperty];
+        public static readonly string[] IdentityProperties = [IdentityProperty, ExternalIdentityProperty];
+        public static readonly string[] VersionProperties = [IdentityProperty, ExternalIdentityProperty, RowVersionProperty];
         public static string[] NoGenerationProperties => [.. IdentityProperties.Union(VersionProperties)];
         #endregion Entity properties
         
         #region Model properties
         public static readonly string IdType = nameof(IdType);
         public static readonly string ModelObjectName = "ModelObject";
+        public static readonly string VersionModelObjectName = "VersionModelObject";
+        public static readonly string ViewModelObjectName = "ViewModelObject";
         #endregion Model properties
 
         public static readonly string[] ModelBaseClasses =
         [
             ModelObjectName,
+            VersionModelObjectName,
         ];
         public static readonly Dictionary<string, string> BaseClassMapping = new()
         {
             { EntityObjectName, ModelObjectName },
+            { VersionEntityObjectName, VersionModelObjectName },
+            { ViewObjectName, ViewModelObjectName },
         };
         
         #region Folders and Files
@@ -242,6 +261,10 @@ namespace TemplateTools.Logic
         /// </summary>
         public static string ItemViewModelGenericType => nameof(ItemViewModelGenericType);
         /// <summary>
+        /// Gets the name of the EntitySetGenericType property.
+        /// </summary>
+        public static string ItemsViewModelGenericType => nameof(ItemsViewModelGenericType);
+        /// <summary>
         /// Gets the name of the ContractSetGenericType property.
         /// </summary>
         public static string ContractSetGenericType => nameof(ContractSetGenericType);
@@ -303,4 +326,4 @@ namespace TemplateTools.Logic
         #endregion Modules
     }
 }
-//MdEnd
+

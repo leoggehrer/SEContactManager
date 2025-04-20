@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace TemplateTools.Logic
 {
     using System.Reflection;
@@ -190,4 +190,4 @@ namespace TemplateTools.Logic
         #endregion methods
     }
 }
-//MdEnd
+

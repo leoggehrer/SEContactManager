@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace TemplateTools.Logic.Git
 {
     using System.Collections.Concurrent;
@@ -24,16 +24,16 @@ namespace TemplateTools.Logic.Git
         private static string[] SearchPatterns => StaticLiterals.SourceFileExtensions.Split('|');
         
         /// <summary>
-        /// Gets or sets the beginning of a gitignore block in a QuickTemplate.
+        /// Gets or sets the beginning of a gitignore block in a SEContactManager.
         /// </summary>
-        private static string BeginGitIgnoreBlock => "#QuickTemplateStart";
+        private static string BeginGitIgnoreBlock => "#SEContactManagerStart";
         /// <summary>
         /// Gets the string value representing the end of a Git ignore block.
         /// </summary>
         /// <value>
-        /// The string value "#QuickTemplateEnd" representing the end of a Git ignore block.
+        /// The string value "#SEContactManagerEnd" representing the end of a Git ignore block.
         /// </value>
-        private static string EndGitIgnoreBlock => "#QuickTemplateEnd";
+        private static string EndGitIgnoreBlock => "#SEContactManagerEnd";
         #endregion Properties
         
         /// <summary>
@@ -191,4 +191,4 @@ namespace TemplateTools.Logic.Git
         }
     }
 }
-//MdEnd
+

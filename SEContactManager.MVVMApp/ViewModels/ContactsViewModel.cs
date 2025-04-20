@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls;
+﻿#if GENERATEDCODE_ON
+using Avalonia.Controls;
 using SEContactManager.MVVMApp.Models;
 using System;
 using System.Collections.Generic;
@@ -21,3 +22,4 @@ namespace SEContactManager.MVVMApp.ViewModels
         }
     }
 }
+#endif

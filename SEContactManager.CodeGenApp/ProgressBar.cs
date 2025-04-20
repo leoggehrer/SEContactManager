@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace SEContactManager.CodeGenApp
 {
     using System;
@@ -104,4 +104,3 @@ namespace SEContactManager.CodeGenApp
         }
     }
 }
-//MdEnd

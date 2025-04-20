@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace TemplateTools.ConApp.Apps
 {
     /// <summary>
@@ -134,4 +134,4 @@ namespace TemplateTools.ConApp.Apps
         #endregion app methods
     }
 }
-//MdEnd
+

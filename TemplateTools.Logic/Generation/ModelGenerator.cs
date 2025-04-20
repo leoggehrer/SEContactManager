@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace TemplateTools.Logic.Generation
 {
     using System.Reflection;
@@ -18,11 +18,6 @@ namespace TemplateTools.Logic.Generation
     /// <param name="solutionProperties">The solution properties.</param>
     internal abstract partial class ModelGenerator(ISolutionProperties solutionProperties) : ItemGenerator(solutionProperties)
     {
-        /// <summary>
-        /// Gets the properties of the item.
-        /// </summary>
-        protected abstract ItemProperties ItemProperties { get; }
-
         #region overrides
         /// <summary>
         /// Returns the type of the property.
@@ -58,7 +53,9 @@ namespace TemplateTools.Logic.Generation
             if (StaticLiterals.VersionProperties.Any(vp => vp.Equals(propertyInfo.Name)) == false
                 && copyType.Equals(propertyInfo.DeclaringType!.FullName, StringComparison.CurrentCultureIgnoreCase) == false)
             {
-                if (ItemProperties.IsArrayType(propertyInfo.PropertyType))
+                if (ItemProperties.IsArrayType(propertyInfo.PropertyType)
+                    && propertyInfo.PropertyType.GetElementType() != typeof(string)
+                    && propertyInfo.PropertyType.GetElementType()!.IsPrimitive == false)
                 {
                     var modelType = ItemProperties.GetSubType(propertyInfo.PropertyType.GetElementType()!);
 
@@ -77,38 +74,6 @@ namespace TemplateTools.Logic.Generation
                     var modelType = ItemProperties.GetSubType(propertyInfo.PropertyType);
 
                     modelType = $"{modelFolder}{modelType}";
-                    result = $"{propertyInfo.Name} = other.{propertyInfo.Name} != null ? {modelType}.Create((object)other.{propertyInfo.Name}) : null;";
-                }
-            }
-            return result ?? base.CopyProperty(copyType, propertyInfo);
-        }
-        /// <summary>
-        /// Copies the specified property of the given copy type.
-        /// </summary>
-        /// <param name="copyType">The type to copy.</param>
-        /// <param name="propertyInfo">The PropertyInfo object representing the property to be copied.</param>
-        /// <returns>A string representation of the copied property.</returns>
-        protected override string CopyDelegateProperty(string copyType, PropertyInfo propertyInfo)
-        {
-            string? result = null;
-
-            if (StaticLiterals.VersionProperties.Any(vp => vp.Equals(propertyInfo.Name)) == false
-            && copyType.Equals(propertyInfo.DeclaringType!.FullName, StringComparison.CurrentCultureIgnoreCase) == false)
-            {
-                if (ItemProperties.IsArrayType(propertyInfo.PropertyType))
-                {
-                    var modelType = ItemProperties.ConvertEntityToModelType(propertyInfo.PropertyType.GetElementType()!.FullName!);
-
-                    result = $"{propertyInfo.Name} = other.{propertyInfo.Name}.Select(e => {modelType}.Create((object)e)).ToArray();";
-                }
-                else if (ItemProperties.IsListType(propertyInfo.PropertyType))
-                {
-                    result = string.Empty;
-                }
-                else if (ItemProperties.IsEntityType(propertyInfo.PropertyType))
-                {
-                    var modelType = ItemProperties.ConvertEntityToModelType(propertyInfo.PropertyType.FullName!);
-
                     result = $"{propertyInfo.Name} = other.{propertyInfo.Name} != null ? {modelType}.Create((object)other.{propertyInfo.Name}) : null;";
                 }
             }
@@ -220,9 +185,9 @@ namespace TemplateTools.Logic.Generation
             var modelSubFilePath = ConvertModelSubPath(ItemProperties.CreateModelSubPath(type, string.Empty, StaticLiterals.CSharpFileExtension));
             var visibility = QuerySetting<string>(unitType, itemType, type, StaticLiterals.Visibility, "public");
             var attributes = QuerySetting<string>(unitType, itemType, type, StaticLiterals.Attribute, string.Empty);
-            var contractType = ItemProperties.CreateFullCommonModelContractType(type);
+            var contractType = ItemProperties.CreateFullCommonContractType(type);
             var typeProperties = type.GetAllPropertyInfos();
-            var generateProperties = typeProperties.Where(e => StaticLiterals.NoGenerationProperties.Any(p => p.Equals(e.Name)) == false) ?? [];
+            var generationProperties = typeProperties.Where(e => StaticLiterals.NoGenerationProperties.Any(p => p.Equals(e.Name)) == false) ?? [];
             GeneratedItem result = new(unitType, itemType)
             {
                 FullName = modelFullName,
@@ -237,7 +202,7 @@ namespace TemplateTools.Logic.Generation
             result.AddRange(CreatePartialStaticConstrutor(modelName));
             result.AddRange(CreatePartialConstrutor("public", modelName));
 
-            foreach (var propertyInfo in generateProperties)
+            foreach (var propertyInfo in generationProperties)
             {
                 if (CanCreate(propertyInfo)
                     && propertyInfo.IsNavigationProperties() == false
@@ -334,4 +299,4 @@ namespace TemplateTools.Logic.Generation
         #endregion Partial methods
     }
 }
-//MdEnd
+

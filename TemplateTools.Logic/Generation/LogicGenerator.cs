@@ -1,5 +1,4 @@
 ﻿//@CodeCopy
-//MdStart
 namespace TemplateTools.Logic.Generation
 {
     using System.Reflection;
@@ -19,24 +18,23 @@ namespace TemplateTools.Logic.Generation
         /// <summary>
         /// Gets or sets the ItemProperties for the current instance.
         /// </summary>
-        /// <value>
-        /// The ItemProperties for the current instance.
-        /// </value>
         protected override ItemProperties ItemProperties => _itemProperties ??= new ItemProperties(SolutionProperties.SolutionName, StaticLiterals.LogicExtension);
         /// <summary>
         /// Gets or sets a value indicating whether to generate the database context.
         /// </summary>
-        /// <value>
-        ///   <c>true</c> if the database context should be generated; otherwise, <c>false</c>.
-        /// </value>
         public bool GenerateDbContext { get; set; }
         /// <summary>
-        /// Gets or sets a value indicating whether all model contracts should be generated.
+        /// Gets or sets a value indicating whether to generate the entity contracts.
         /// </summary>
-        /// <value>
-        ///   <c>true</c> if all model contracts should be generated; otherwise, <c>false</c>.
-        /// </value>
-        public bool GenerateAllEntityContracts { get; set; }
+        public bool GenerateEntityContracts { get; set; }
+        /// <summary>
+        /// Gets or sets a value indicating whether to generate the entity sets.
+        /// </summary>
+        public bool GenerateEntitySets { get; set; }
+        /// <summary>
+        /// Gets or sets a value indicating whether to generate the entity set contracts.
+        /// </summary>
+        public bool GenerateEntitySetContracts { get; set; }
         #endregion properties
 
         #region constructors
@@ -49,7 +47,9 @@ namespace TemplateTools.Logic.Generation
             var generateAll = QuerySetting<string>(Common.ItemType.AllItems, StaticLiterals.AllItems, StaticLiterals.Generate, "True");
 
             GenerateDbContext = QuerySetting<bool>(Common.ItemType.DbContext, StaticLiterals.AllItems, StaticLiterals.Generate, generateAll);
-            GenerateAllEntityContracts = QuerySetting<bool>(Common.ItemType.EntityContract, StaticLiterals.AllItems, StaticLiterals.Generate, generateAll);
+            GenerateEntityContracts = QuerySetting<bool>(Common.ItemType.EntityContract, StaticLiterals.AllItems, StaticLiterals.Generate, generateAll);
+            GenerateEntitySets = QuerySetting<bool>(Common.ItemType.EntitySet, StaticLiterals.AllItems, StaticLiterals.Generate, generateAll);
+            GenerateEntitySetContracts = QuerySetting<bool>(Common.ItemType.EntitySetContract, StaticLiterals.AllItems, StaticLiterals.Generate, generateAll);
         }
         #endregion constructors
 
@@ -63,12 +63,16 @@ namespace TemplateTools.Logic.Generation
             var result = new List<IGeneratedItem>();
 
             result.AddRange(CreateEntityContracts());
-
+            result.AddRange(ConnectEntitiesWithContract());
             result.AddRange(CreateEntitySetContracts());
             result.AddRange(CreateEntitySets());
 
+            result.AddRange(ConnectViewsWithContract());
+            result.AddRange(CreateViewSetContracts());
+            result.AddRange(CreateViewSets());
+
             result.Add(CreateDbContext());
-            result.Add(CreateContextContract(Common.UnitType.Logic, Common.ItemType.ContextContract));
+            result.Add(CreateDbContextContract(Common.UnitType.Logic, Common.ItemType.ContextContract));
             return result;
         }
 
@@ -81,7 +85,7 @@ namespace TemplateTools.Logic.Generation
         /// </returns>
         private static bool GetGenerateDefault(Type type)
         {
-            return !EntityProject.IsNotAGenerationEntity(type);
+            return EntityProject.IsSystemEntity(type) || EntityProject.IsCustomEntity(type);
         }
 
         /// <summary>
@@ -103,17 +107,15 @@ namespace TemplateTools.Logic.Generation
             result.Add("{");
 
             result.Add("#region properties");
-            foreach (var type in entityProject.EntityTypes)
+            foreach (var type in entityProject.AllEntityTypes)
             {
                 var defaultValue = (GenerateDbContext && GetGenerateDefault(type)).ToString();
 
                 if (QuerySetting<bool>(Common.ItemType.DbContext, type, StaticLiterals.Generate, defaultValue))
                 {
                     var entityType = ItemProperties.GetModuleSubType(type);
-                    var subNamespace = ItemProperties.CreateSubNamespaceFromType(type).Replace(StaticLiterals.EntitiesFolder, StaticLiterals.DataContextFolder);
                     var entitySubType = $"{StaticLiterals.EntitiesFolder}.{ItemProperties.CreateSubTypeFromEntity(type)}";
                     var entitySetName = ItemProperties.CreateEntitySetName(type);
-                    var entitySetType = $"{subNamespace}.{entitySetName}";
                     var dbSetName = $"Db{type.Name}Set";
                     var dbSetType = $"DbSet<{entityType}>";
 
@@ -121,20 +123,41 @@ namespace TemplateTools.Logic.Generation
                     result.Add($"private {dbSetType} {dbSetName}" + "{ get; set; }");
 
                     result.AddRange(CreateComment(type));
-                    result.Add($"public {StaticLiterals.ContractsFolder}.{StaticLiterals.EntitySetContractName}<{entitySubType}> {entitySetName} => new {entitySetType}(this, {dbSetName});");
+                    result.Add($"public {StaticLiterals.ContractsFolder}.{StaticLiterals.EntitySetContractName}<{entitySubType}> {entitySetName} => GetEntitySet<{entitySubType}>();");
                 }
             }
+
+            foreach (var type in entityProject.AllViewTypes)
+            {
+                var defaultValue = (GenerateDbContext && GetGenerateDefault(type)).ToString();
+
+                if (QuerySetting<bool>(Common.ItemType.DbContext, type, StaticLiterals.Generate, defaultValue))
+                {
+                    var entityType = ItemProperties.GetModuleSubType(type);
+                    var entitySubType = $"{StaticLiterals.EntitiesFolder}.{ItemProperties.CreateSubTypeFromEntity(type)}";
+                    var viewSetName = ItemProperties.CreateViewSetName(type);
+                    var dbSetName = $"Db{type.Name}Set";
+                    var dbSetType = $"DbSet<{entityType}>";
+
+                    result.AddRange(CreateComment(type));
+                    result.Add($"private {dbSetType} {dbSetName}" + "{ get; set; }");
+
+                    result.AddRange(CreateComment(type));
+                    result.Add($"public {StaticLiterals.ContractsFolder}.{StaticLiterals.ViewSetContractName}<{entitySubType}> {viewSetName} => GetViewSet<{entitySubType}>();");
+                }
+            }
+
             result.Add("#endregion properties");
             result.Add(string.Empty);
 
             result.Add("#region partial methods");
             result.AddRange(CreateComment());
-            result.Add($"partial void GetGeneratorDbSet<E>(ref DbSet<E>? dbSet, ref bool handled) where E : Entities.{StaticLiterals.EntityObjectName}");
+            result.Add($"partial void GetGeneratorDbSet<E>(ref DbSet<E>? dbSet, ref bool handled) where E : Entities.{StaticLiterals.DbObjectName}");
             result.Add("{");
 
             bool first = false;
 
-            foreach (var type in entityProject.EntityTypes)
+            foreach (var type in entityProject.AllEntityTypes.Union(entityProject.AllViewTypes))
             {
                 var defaultValue = (GenerateDbContext && GetGenerateDefault(type)).ToString();
 
@@ -151,10 +174,195 @@ namespace TemplateTools.Logic.Generation
                 }
             }
             result.Add("}");
+            result.AddRange(CreateComment());
+            result.Add($"partial void GetGeneratorEntitySet<E>(ref EntitySet<E>? entitySet, ref bool handled) where E : Entities.{StaticLiterals.EntityObjectName}, new()");
+            result.Add("{");
+
+            first = false;
+
+            foreach (var type in entityProject.AllEntityTypes)
+            {
+                var defaultValue = (GenerateDbContext && GetGenerateDefault(type)).ToString();
+
+                if (QuerySetting<bool>(Common.ItemType.DbContext, type, StaticLiterals.Generate, defaultValue))
+                {
+                    var entityType = ItemProperties.GetModuleSubType(type);
+                    var subNamespace = ItemProperties.CreateSubNamespaceFromType(type).Replace(StaticLiterals.EntitiesFolder, StaticLiterals.DataContextFolder);
+                    var entitySubType = $"{StaticLiterals.EntitiesFolder}.{ItemProperties.CreateSubTypeFromEntity(type)}";
+                    var entitySetName = ItemProperties.CreateEntitySetName(type);
+                    var entitySetType = $"{subNamespace}.{entitySetName}";
+                    var dbSetName = $"Db{type.Name}Set";
+
+                    result.Add($"{(first ? "else " : string.Empty)}if (typeof(E) == typeof({entityType}))");
+                    result.Add("{");
+                    result.Add($"entitySet = new {entitySetType}(this,{dbSetName}) as {StaticLiterals.EntitySetName}<E>;");
+                    result.Add("handled = true;");
+                    result.Add("}");
+                    first = true;
+                }
+            }
+            result.Add("}");
+
+            result.AddRange(CreateComment());
+            result.Add($"partial void GetGeneratorViewSet<E>(ref ViewSet<E>? viewSet, ref bool handled) where E : Entities.{StaticLiterals.ViewObjectName}, new()");
+            result.Add("{");
+
+            first = false;
+
+            foreach (var type in entityProject.AllViewTypes)
+            {
+                var defaultValue = (GenerateDbContext && GetGenerateDefault(type)).ToString();
+
+                if (QuerySetting<bool>(Common.ItemType.DbContext, type, StaticLiterals.Generate, defaultValue))
+                {
+                    var entityType = ItemProperties.GetModuleSubType(type);
+                    var subNamespace = ItemProperties.CreateSubNamespaceFromType(type).Replace(StaticLiterals.EntitiesFolder, StaticLiterals.DataContextFolder);
+                    var entitySubType = $"{StaticLiterals.EntitiesFolder}.{ItemProperties.CreateSubTypeFromEntity(type)}";
+                    var viewSetName = ItemProperties.CreateViewSetName(type);
+                    var viewSetType = $"{subNamespace}.{viewSetName}";
+                    var dbSetName = $"Db{type.Name}Set";
+
+                    result.Add($"{(first ? "else " : string.Empty)}if (typeof(E) == typeof({entityType}))");
+                    result.Add("{");
+                    result.Add($"viewSet = new {viewSetType}(this,{dbSetName}) as {StaticLiterals.ViewSetName}<E>;");
+                    result.Add("handled = true;");
+                    result.Add("}");
+                    first = true;
+                }
+            }
+            result.Add("}");
+
+            result.AddRange(CreateComment());
+            result.Add($"static partial void OnViewModelCreating(ModelBuilder modelBuilder)");
+            result.Add("{");
+
+            foreach (var type in entityProject.AllViewTypes)
+            {
+                var defaultValue = (GenerateDbContext && GetGenerateDefault(type)).ToString();
+
+                if (QuerySetting<bool>(Common.ItemType.DbContext, type, StaticLiterals.Generate, defaultValue))
+                {
+                    var viewAttribute = type.GetCustomAttribute<CommonModules.Attributes.ViewAttribute>();
+
+                    if (viewAttribute != null)
+                    {
+                        var viewName = viewAttribute.Name.HasContent() ? viewAttribute.Name : type.Name.CreatePluralWord();
+                        var viewShema = viewAttribute.Schema;
+                        var entitySubType = $"{StaticLiterals.EntitiesFolder}.{ItemProperties.CreateSubTypeFromEntity(type)}";
+
+                        result.Add($"modelBuilder.Entity<{entitySubType}>()");
+                        if (viewShema.HasContent())
+                        {
+                            result.Add($".ToView(\"{viewName}\", \"{viewShema}\")");
+                        }
+                        else
+                        {
+                            result.Add($".ToView(\"{viewName}\")");
+                        }
+                        result.Add($".HasNoKey();");
+                    }
+                }
+            }
+
+            result.Add("}");
             result.Add("#endregion partial methods");
 
             result.Add("}");
             result.EnvelopeWithANamespace(dataContextNamespace);
+            result.FormatCSharpCode();
+            return result;
+        }
+        /// <summary>
+        /// Creates entity contracts.
+        /// </summary>
+        /// <returns>An enumerable collection of generated items.</returns>
+        private List<GeneratedItem> CreateEntityContracts()
+        {
+            var result = new List<GeneratedItem>();
+            var entityProject = EntityProject.Create(SolutionProperties);
+
+            foreach (var type in entityProject.AllEntityTypes.Where(t => EntityProject.IsSystemEntity(t)))
+            {
+                var itemtype = Common.ItemType.EntityContract;
+                var defaultValue = (GenerateEntityContracts && GetGenerateDefault(type)).ToString();
+
+                if (CanCreate(type) && QuerySetting<bool>(itemtype, type, StaticLiterals.Generate, defaultValue))
+                {
+                    result.Add(CreateEntityContract(type, Common.UnitType.Logic, itemtype));
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Creates entity contracts.
+        /// </summary>
+        /// <returns>An enumerable collection of generated items.</returns>
+        private List<GeneratedItem> ConnectEntitiesWithContract()
+        {
+            var result = new List<GeneratedItem>();
+            var entityProject = EntityProject.Create(SolutionProperties);
+
+            foreach (var type in entityProject.AllEntityTypes)
+            {
+                var itemtype = Common.ItemType.EntityContract;
+                var defaultValue = (GenerateEntityContracts && GetGenerateDefault(type)).ToString();
+
+                if (CanCreate(type) && QuerySetting<bool>(itemtype, type, StaticLiterals.Generate, defaultValue))
+                {
+                    result.Add(ConnectEntityWithContract(type, Common.UnitType.Logic, itemtype));
+                }
+            }
+            return result;
+        }
+        /// <summary>
+        /// Creates view contracts.
+        /// </summary>
+        /// <returns>An enumerable collection of generated items.</returns>
+        private List<GeneratedItem> ConnectViewsWithContract()
+        {
+            var result = new List<GeneratedItem>();
+            var entityProject = EntityProject.Create(SolutionProperties);
+
+            foreach (var type in entityProject.AllViewTypes)
+            {
+                var itemtype = Common.ItemType.ViewContract;
+                var defaultValue = (GenerateEntityContracts && GetGenerateDefault(type)).ToString();
+
+                if (CanCreate(type) && QuerySetting<bool>(itemtype, type, StaticLiterals.Generate, defaultValue))
+                {
+                    result.Add(ConnectEntityWithContract(type, Common.UnitType.Logic, itemtype));
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Creates an entity contract for the specified type, unit type, and item type.
+        /// </summary>
+        /// <param name="type">The type of the entity contract.</param>
+        /// <param name="unitType">The unit type of the entity contract.</param>
+        /// <param name="itemType">The item type of the entity contract.</param>
+        /// <returns>The generated entity contract item.</returns>
+        private GeneratedItem ConnectEntityWithContract(Type type, Common.UnitType unitType, Common.ItemType itemType)
+        {
+            var subNamespace = ItemProperties.CreateSubNamespaceFromType(type);
+            var itemName = ItemProperties.CreateEntityName(type);
+            var subPath = ItemProperties.CreateSubPathFromType(type);
+            var fileName = $"{itemName}{StaticLiterals.GenerationPostFix}{StaticLiterals.CSharpFileExtension}";
+            var entityNamespace = $"{ItemProperties.ProjectNamespace}.{subNamespace}";
+            var contractType = ItemProperties.CreateFullContractType(type);
+            var result = new GeneratedItem(unitType, itemType)
+            {
+                FullName = $"{entityNamespace}.{itemName}",
+                FileExtension = StaticLiterals.CSharpFileExtension,
+                SubFilePath = $"{subPath}{Path.DirectorySeparatorChar}{fileName}",
+            };
+            result.AddRange(CreateComment(type));
+            result.Add($"partial class {itemName} : {contractType}");
+            result.Add("{");
+            result.Add("}");
+            result.EnvelopeWithANamespace(entityNamespace);
             result.FormatCSharpCode();
             return result;
         }
@@ -168,17 +376,41 @@ namespace TemplateTools.Logic.Generation
             var result = new List<GeneratedItem>();
             var entityProject = EntityProject.Create(SolutionProperties);
 
-            foreach (var type in entityProject.EntityTypes)
+            foreach (var type in entityProject.AllEntityTypes)
             {
-                var defaultValue = (GenerateAllEntityContracts && GetGenerateDefault(type)).ToString();
+                var itemType = Common.ItemType.EntitySet;
+                var defaultValue = (GenerateEntitySets && GetGenerateDefault(type)).ToString();
 
-                if (CanCreate(type) && QuerySetting<bool>(Common.ItemType.EntitySet, type, StaticLiterals.Generate, defaultValue))
+                if (CanCreate(type) && QuerySetting<bool>(itemType, type, StaticLiterals.Generate, defaultValue))
                 {
-                    result.Add(CreateEntitySet(type, Common.UnitType.Logic, Common.ItemType.EntitySet));
+                    result.Add(CreateEntitySet(type, Common.UnitType.Logic, itemType));
                 }
             }
             return result;
         }
+
+        /// <summary>
+        /// Creates view sets.
+        /// </summary>
+        /// <returns>An enumerable collection of generated items.</returns>
+        private List<GeneratedItem> CreateViewSets()
+        {
+            var result = new List<GeneratedItem>();
+            var entityProject = EntityProject.Create(SolutionProperties);
+
+            foreach (var type in entityProject.AllViewTypes)
+            {
+                var itemType = Common.ItemType.ViewSet;
+                var defaultValue = (GenerateEntitySets && GetGenerateDefault(type)).ToString();
+
+                if (CanCreate(type) && QuerySetting<bool>(itemType, type, StaticLiterals.Generate, defaultValue))
+                {
+                    result.Add(CreateViewSet(type, Common.UnitType.Logic, itemType));
+                }
+            }
+            return result;
+        }
+
         /// <summary>
         /// Creates an entity set for the specified type, unit type, and item type.
         /// </summary>
@@ -193,7 +425,7 @@ namespace TemplateTools.Logic.Generation
             var fileName = $"{itemName}{StaticLiterals.CSharpFileExtension}";
             var entitySetGenericType = QuerySetting<string>(itemType, StaticLiterals.AllItems, StaticLiterals.EntitySetGenericType, StaticLiterals.EntitySetName);
             var entityType = ItemProperties.GetModuleSubType(type);
-            var contractType = ItemProperties.CreateFullCommonModelContractType(type);
+            var contractType = ItemProperties.CreateFullContractType(type);
             var contractSubNamespace = ItemProperties.CreateSubNamespaceFromEntity(type, StaticLiterals.ContractsFolder);
             var dataContextSubNamespace = ItemProperties.CreateSubNamespaceFromEntity(type, StaticLiterals.DataContextFolder);
             var dataContextNamespace = $"{ItemProperties.ProjectNamespace}.{dataContextSubNamespace}";
@@ -212,9 +444,9 @@ namespace TemplateTools.Logic.Generation
             result.Add("{");
 
             result.AddRange(CreatePartialStaticConstrutor(itemName));
-            result.AddRange(CreatePartialConstrutor("public", itemName, $"DbContext context, DbSet<TEntity> dbSet", "base(context, dbSet)", null, true));
+            result.AddRange(CreatePartialConstrutor("public", itemName, $"ProjectDbContext context, DbSet<TEntity> dbSet", "base(context, dbSet)", null, true));
 
-            result.AddRange(CreateContractCopyProperties("protected override", "TEntity", "TContract", "target", "source"));
+            result.AddRange(CreateCopyProperties("protected override", "TEntity", "TContract", "target", "source"));
             result.Add("}");
             result.EnvelopeWithANamespace(dataContextNamespace);
             result.FormatCSharpCode();
@@ -222,55 +454,92 @@ namespace TemplateTools.Logic.Generation
         }
 
         /// <summary>
-        /// Creates entity contracts.
+        /// Creates an entity set for the specified type, unit type, and item type.
+        /// </summary>
+        /// <param name="type">The type of the entity set.</param>
+        /// <param name="unitType">The unit type of the entity set.</param>
+        /// <param name="itemType">The item type of the entity set.</param>
+        /// <returns>The generated entity set item.</returns>
+        private GeneratedItem CreateViewSet(Type type, Common.UnitType unitType, Common.ItemType itemType)
+        {
+            var itemName = ItemProperties.CreateViewSetName(type);
+            var contractSetName = ItemProperties.CreateContractSetName(type);
+            var fileName = $"{itemName}{StaticLiterals.CSharpFileExtension}";
+            var viewSetGenericType = QuerySetting<string>(itemType, StaticLiterals.AllItems, StaticLiterals.EntitySetGenericType, StaticLiterals.ViewSetName);
+            var entityType = ItemProperties.GetModuleSubType(type);
+            var contractType = ItemProperties.CreateFullContractType(type);
+            var contractSubNamespace = ItemProperties.CreateSubNamespaceFromEntity(type, StaticLiterals.ContractsFolder);
+            var dataContextSubNamespace = ItemProperties.CreateSubNamespaceFromEntity(type, StaticLiterals.DataContextFolder);
+            var dataContextNamespace = $"{ItemProperties.ProjectNamespace}.{dataContextSubNamespace}";
+            var result = new GeneratedItem(unitType, itemType)
+            {
+                FullName = $"{dataContextNamespace}.{itemName}",
+                FileExtension = StaticLiterals.CSharpFileExtension,
+                SubFilePath = ItemProperties.CreateSubFilePath(type, fileName, StaticLiterals.DataContextFolder),
+            };
+
+            viewSetGenericType = QuerySetting<string>(itemType, type, StaticLiterals.EntitySetGenericType, viewSetGenericType);
+            result.Add($"using TEntity = {entityType};");
+            result.Add($"using TContract = {contractType};");
+            result.AddRange(CreateComment(type));
+            result.Add($"internal sealed partial class {itemName} : {viewSetGenericType}<TEntity>, {contractSubNamespace}.{contractSetName}");
+            result.Add("{");
+
+            result.AddRange(CreatePartialStaticConstrutor(itemName));
+            result.AddRange(CreatePartialConstrutor("public", itemName, $"ProjectDbContext context, DbSet<TEntity> dbSet", "base(context, dbSet)", null, true));
+
+            result.AddRange(CreateCopyProperties("protected override", "TEntity", "TContract", "target", "source"));
+            result.Add("}");
+            result.EnvelopeWithANamespace(dataContextNamespace);
+            result.FormatCSharpCode();
+            return result;
+        }
+
+        /// <summary>
+        /// Creates view set contracts.
         /// </summary>
         /// <returns>An enumerable collection of generated items.</returns>
-        private List<GeneratedItem> CreateEntityContracts()
+        private List<GeneratedItem> CreateViewSetContracts()
         {
             var result = new List<GeneratedItem>();
             var entityProject = EntityProject.Create(SolutionProperties);
 
-            foreach (var type in entityProject.EntityTypes)
+            foreach (var type in entityProject.AllViewTypes)
             {
-                var itemtype = Common.ItemType.EntityContract;
-                var defaultValue = (GenerateAllEntityContracts && GetGenerateDefault(type)).ToString();
+                var itemType = Common.ItemType.ViewSetContract;
+                var defaultValue = (GenerateEntitySetContracts && GetGenerateDefault(type)).ToString();
 
-                if (CanCreate(type) && QuerySetting<bool>(itemtype, type, StaticLiterals.Generate, defaultValue))
+                if (CanCreate(type) && QuerySetting<bool>(itemType, type, StaticLiterals.Generate, defaultValue))
                 {
-                    result.Add(CreateEntityContract(type, Common.UnitType.Logic,itemtype));
+                    result.Add(CreateViewSetContract(type, Common.UnitType.Logic, itemType));
                 }
             }
             return result;
         }
-        /// <summary>
-        /// Creates an entity contract for the specified type, unit type, and item type.
-        /// </summary>
-        /// <param name="type">The type of the entity contract.</param>
-        /// <param name="unitType">The unit type of the entity contract.</param>
-        /// <param name="itemType">The item type of the entity contract.</param>
-        /// <returns>The generated entity contract item.</returns>
-        private GeneratedItem CreateEntityContract(Type type, Common.UnitType unitType, Common.ItemType itemType)
+        private GeneratedItem CreateViewSetContract(Type type, Common.UnitType unitType, Common.ItemType itemType)
         {
-            var subNamespace = ItemProperties.CreateSubNamespaceFromType(type);
-            var itemName = ItemProperties.CreateEntityName(type);
-            var subPath = ItemProperties.CreateSubPathFromType(type);
-            var fileName = $"{itemName}{StaticLiterals.GenerationPostFix}{StaticLiterals.CSharpFileExtension}";
-            var entityNamespace = $"{ItemProperties.ProjectNamespace}.{subNamespace}";
-            var contractType = ItemProperties.CreateFullCommonModelContractType(type);
+            var itemName = ItemProperties.CreateContractSetName(type);
+            var fileName = $"{itemName}{StaticLiterals.CSharpFileExtension}";
+            var visibility = ItemProperties.GetDefaultVisibility(type);
+            var entitySubType = $"{StaticLiterals.EntitiesFolder}.{ItemProperties.CreateSubTypeFromEntity(type)}";
+            var subNamespace = ItemProperties.CreateSubNamespaceFromEntity(type, StaticLiterals.ContractsFolder);
+            var contractNamespace = $"{ItemProperties.ProjectNamespace}.{subNamespace}";
+            var contractSetGenericType = QuerySetting<string>(itemType, StaticLiterals.AllItems, StaticLiterals.ContractSetGenericType, StaticLiterals.ViewSetContractName);
             var result = new GeneratedItem(unitType, itemType)
             {
-                FullName = $"{entityNamespace}.{itemName}",
+                FullName = $"{contractNamespace}.{itemName}",
                 FileExtension = StaticLiterals.CSharpFileExtension,
-                SubFilePath = $"{subPath}{Path.DirectorySeparatorChar}{fileName}",
+                SubFilePath = ItemProperties.CreateSubFilePath(type, fileName, StaticLiterals.ContractsFolder),
             };
             result.AddRange(CreateComment(type));
-            result.Add($"partial class {itemName} : {contractType}");
+            result.Add($"{visibility} partial interface {itemName} : {contractSetGenericType}<{entitySubType}>");
             result.Add("{");
             result.Add("}");
-            result.EnvelopeWithANamespace(entityNamespace);
+            result.EnvelopeWithANamespace(contractNamespace);
             result.FormatCSharpCode();
             return result;
         }
+
         /// <summary>
         /// Creates entity set contracts.
         /// </summary>
@@ -280,10 +549,10 @@ namespace TemplateTools.Logic.Generation
             var result = new List<GeneratedItem>();
             var entityProject = EntityProject.Create(SolutionProperties);
 
-            foreach (var type in entityProject.EntityTypes)
+            foreach (var type in entityProject.AllEntityTypes)
             {
-                var itemType = Common.ItemType.EntitySetContract;
-                var defaultValue = (GenerateAllEntityContracts && GetGenerateDefault(type)).ToString();
+                var itemType = Common.ItemType.EntitySet;
+                var defaultValue = (GenerateEntitySetContracts && GetGenerateDefault(type)).ToString();
 
                 if (CanCreate(type) && QuerySetting<bool>(itemType, type, StaticLiterals.Generate, defaultValue))
                 {
@@ -296,6 +565,7 @@ namespace TemplateTools.Logic.Generation
         {
             var itemName = ItemProperties.CreateContractSetName(type);
             var fileName = $"{itemName}{StaticLiterals.CSharpFileExtension}";
+            var visibility = ItemProperties.GetDefaultVisibility(type);
             var entitySubType = $"{StaticLiterals.EntitiesFolder}.{ItemProperties.CreateSubTypeFromEntity(type)}";
             var subNamespace = ItemProperties.CreateSubNamespaceFromEntity(type, StaticLiterals.ContractsFolder);
             var contractNamespace = $"{ItemProperties.ProjectNamespace}.{subNamespace}";
@@ -307,7 +577,7 @@ namespace TemplateTools.Logic.Generation
                 SubFilePath = ItemProperties.CreateSubFilePath(type, fileName, StaticLiterals.ContractsFolder),
             };
             result.AddRange(CreateComment(type));
-            result.Add($"public partial interface {itemName} : {contractSetGenericType}<{entitySubType}>");
+            result.Add($"{visibility} partial interface {itemName} : {contractSetGenericType}<{entitySubType}>");
             result.Add("{");
             result.Add("}");
             result.EnvelopeWithANamespace(contractNamespace);
@@ -321,10 +591,10 @@ namespace TemplateTools.Logic.Generation
         /// <param name="unitType">The unit type of the context contract.</param>
         /// <param name="itemType">The item type of the context contract.</param>
         /// <returns>The generated context contract item.</returns>
-        private GeneratedItem CreateContextContract(Common.UnitType unitType, Common.ItemType itemType)
+        private GeneratedItem CreateDbContextContract(Common.UnitType unitType, Common.ItemType itemType)
         {
             var entityProject = EntityProject.Create(SolutionProperties);
-            var itemName = StaticLiterals.ContextContract;
+            var itemName = StaticLiterals.ContextContractName;
             var contractNamespace = $"{ItemProperties.ProjectNamespace}.{StaticLiterals.ContractsFolder}";
             var subPath = $"{StaticLiterals.ContractsFolder}";
             var fileName = $"{itemName}{StaticLiterals.GenerationPostFix}{StaticLiterals.CSharpFileExtension}";
@@ -349,6 +619,20 @@ namespace TemplateTools.Logic.Generation
 
                     result.AddRange(CreateComment(type));
                     result.Add($"{StaticLiterals.EntitySetContractName}<{entitySubType}> {entitySetName}" + "{ get; }");
+                }
+            }
+
+            foreach (var type in entityProject.AllViewTypes)
+            {
+                var defaultValue = (GenerateDbContext && GetGenerateDefault(type)).ToString();
+
+                if (QuerySetting<bool>(Common.ItemType.DbContext, type, StaticLiterals.Generate, defaultValue))
+                {
+                    var viewSubType = $"{StaticLiterals.EntitiesFolder}.{ItemProperties.CreateSubTypeFromEntity(type)}";
+                    var viewSetName = ItemProperties.CreateViewSetName(type);
+
+                    result.AddRange(CreateComment(type));
+                    result.Add($"{StaticLiterals.ViewSetContractName}<{viewSubType}> {viewSetName}" + "{ get; }");
                 }
             }
 
@@ -418,4 +702,4 @@ namespace TemplateTools.Logic.Generation
         #endregion query settings
     }
 }
-//MdEnd
+

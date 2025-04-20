@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace TemplateTools.Logic.Common
 {
     [Flags]
@@ -9,10 +9,13 @@ namespace TemplateTools.Logic.Common
         ContextContract,
         EntityContract,
         EntitySetContract,
+        ViewContract,
+        ViewSetContract,
         #endregion contracts
 
         #region entities
         EntitySet,
+        ViewSet,
         #endregion entities
 
         #region models
@@ -20,9 +23,10 @@ namespace TemplateTools.Logic.Common
         WebApiEditModel,
         MVVMAppModel,
         MVVMAppEditModel,
-        MVVVMAppViewModel,
+        MVVVMAppItemViewModel,
+        MVVVMAppItemsViewModel,
         #endregion models
-        
+
         #region properties
         Property,
         ModelProperty,
@@ -31,7 +35,8 @@ namespace TemplateTools.Logic.Common
         #endregion properties
         
         #region controllers
-        Controller,
+        EntityController,
+        ViewController,
         ContextAccessor,
         #endregion controllers
         
@@ -65,4 +70,3 @@ namespace TemplateTools.Logic.Common
         #endregion general
     }
 }
-//MdEnd

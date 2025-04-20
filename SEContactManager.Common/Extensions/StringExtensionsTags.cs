@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 using System.Text;
 
 namespace SEContactManager.Common.Extensions
@@ -380,4 +380,3 @@ namespace SEContactManager.Common.Extensions
         }
     }
 }
-//MdEnd

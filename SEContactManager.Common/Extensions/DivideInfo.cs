@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace SEContactManager.Common.Extensions
 {
     /// <summary>
@@ -41,4 +41,3 @@ namespace SEContactManager.Common.Extensions
         public string Text { get; internal set; } = String.Empty;
     }
 }
-//MdEnd

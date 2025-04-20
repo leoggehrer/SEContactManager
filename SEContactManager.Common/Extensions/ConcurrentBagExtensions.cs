@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 using System.Collections.Concurrent;
 
 namespace SEContactManager.Common.Extensions
@@ -43,4 +43,4 @@ namespace SEContactManager.Common.Extensions
         }
     }
 }
-//MdEnd
+

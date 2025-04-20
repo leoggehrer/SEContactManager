@@ -1,5 +1,4 @@
 ﻿//@CodeCopy
-//MdStart
 namespace TemplateTools.Logic.Generation
 {
     using System.Reflection;
@@ -52,14 +51,6 @@ namespace TemplateTools.Logic.Generation
         ///<value>
         /// An IEnumerable of Type representing the collection of types in the assembly.
         ///</value>
-        ///<remarks>
-        /// This property is used to retrieve the types present in the assembly.
-        /// The assembly types are obtained either from SolutionProperties.LogicAssemblyTypes if already assigned,
-        /// or by loading the assembly from SolutionProperties.CompileLogicAssemblyFilePath
-        /// or SolutionProperties.LogicAssemblyFilePath if the former is not available.
-        /// If the assembly fails to load or if any exceptions occur while retrieving the types,
-        /// the property returns an empty array.
-        ///</remarks>
         public IEnumerable<Type> AssemblyTypes
         {
             get
@@ -118,30 +109,34 @@ namespace TemplateTools.Logic.Generation
         /// An enumerable collection of Type objects representing the interface types.
         /// </value>
         public IEnumerable<Type> InterfaceTypes => AssemblyTypes.Where(t => t.IsInterface);
+
+        /// <summary>
+        /// Gets the collection of view types, within the assembly.
+        /// </summary>
+        public IEnumerable<Type> AllViewTypes => AssemblyTypes.Where(t => t.IsClass
+                                                                         && t.IsAbstract == false
+                                                                         && t.IsNested == false
+                                                                         && t.Namespace != null
+                                                                         && t.Namespace!.Contains($".{StaticLiterals.EntitiesFolder}")
+                                                                         && t.GetBaseTypes().FirstOrDefault(t => t.Name.Equals(StaticLiterals.ViewObjectName)) != null);
+
+        /// <summary>
+        /// Gets the collection of entity types, within the assembly.
+        /// </summary>
+        public IEnumerable<Type> AllEntityTypes => AssemblyTypes.Where(t => t.IsClass
+                                                                         && t.IsAbstract == false
+                                                                         && t.IsNested == false
+                                                                         && t.Namespace != null
+                                                                         && t.Namespace!.Contains($".{StaticLiterals.EntitiesFolder}")
+                                                                         && t.GetBaseTypes().FirstOrDefault(t => t.Name.Equals(StaticLiterals.EntityObjectName)) != null);
+
         /// <summary>
         /// Gets the collection of entity types, excluding certain types, within the assembly.
         /// </summary>
-        /// <remarks>
-        /// This property returns a collection of types that meet the following criteria:
-        /// - The type is a class and not abstract
-        /// - The type is not nested
-        /// - The type belongs to a namespace that is not null and contains the specified entities folder
-        /// - The type's full name does not contain the specified account folder
-        /// - The type's full name does not contain the specified logging folder
-        /// - The type's name is not equal to the specified entity object name
-        /// - The type's name is not equal to the specified version entity name
-        /// </remarks>
-        public IEnumerable<Type> EntityTypes => AssemblyTypes.Where(t => t.IsClass
-                                                                      && t.IsAbstract == false
-                                                                      && t.IsNested == false
-                                                                      && t.Namespace != null
-                                                                      && t.Namespace!.Contains($".{StaticLiterals.EntitiesFolder}")
-        
-                                                                      && t.FullName!.Contains($"{StaticLiterals.EntitiesFolder}.{StaticLiterals.AccountFolder}.") == false
-                                                                      && t.FullName!.Contains($"{StaticLiterals.EntitiesFolder}.{StaticLiterals.LoggingFolder}.") == false
-                                                                      && t.FullName!.Contains($"{StaticLiterals.EntitiesFolder}.{StaticLiterals.LoggingFolder}.") == false
-        
-                                                                      && t.Name.Equals(StaticLiterals.EntityObjectName) == false);
+        public IEnumerable<Type> EntityTypes => AllEntityTypes.Where(t => t.FullName!.Contains($"{StaticLiterals.EntitiesFolder}.{StaticLiterals.AccountFolder}.") == false
+                                                                       && t.FullName!.Contains($"{StaticLiterals.EntitiesFolder}.{StaticLiterals.LoggingFolder}.") == false
+                                                                       && t.FullName!.Contains($"{StaticLiterals.EntitiesFolder}.{StaticLiterals.LoggingFolder}.") == false);
+
         /// <summary>
         /// Determines if the specified <paramref name="type"/> is an account entity.
         /// </summary>
@@ -196,14 +191,23 @@ namespace TemplateTools.Logic.Generation
             return type.FullName!.EndsWith($".{StaticLiterals.Revision}.History");
         }
         ///<summary>
-        ///Checks if the given type is not a Generation entity.
+        ///Checks if the given type is a system entity.
         ///</summary>
         ///<param name="type">The type to check.</param>
-        ///<returns>True if the type is not a Generation entity, false otherwise.</returns>
-        public static bool IsNotAGenerationEntity(Type type)
+        ///<returns>True if the type is a system entity, false otherwise.</returns>
+        public static bool IsSystemEntity(Type type)
         {
             return IsAccountEntity(type) || IsAccessEntity(type) || IsLoggingEntity(type) || IsRevisionEntity(type);
         }
+        ///<summary>
+        ///Checks if the given type is a custom entity.
+        ///</summary>
+        ///<param name="type">The type to check.</param>
+        ///<returns>True if the type is a custom entity, false otherwise.</returns>
+        public static bool IsCustomEntity(Type type)
+        {
+            return IsSystemEntity(type) == false;
+        }
     }
 }
-//MdEnd
+

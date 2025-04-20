@@ -1,5 +1,4 @@
 ﻿//@CodeCopy
-//MdStart
 using TemplateTools.Logic;
 using TemplateTools.Logic.Contracts;
 using TemplateTools.Logic.Git;
@@ -18,10 +17,11 @@ namespace SEContactManager.CodeGenApp
         static CodeGeneratorApp()
         {
             ClassConstructing();
-            ToGroupFile = false;
+            WriteToGroupFile = false;
+            WriteInfoHeader = true;
             IncludeCleanDirectory = true;
             ExcludeGeneratedFilesFromGIT = true;
-            SourcePath = GetCurrentSolutionPath();
+            SourcePath = SolutionPath = TemplatePath.GetSolutionPathByExecution();
             ClassConstructed();
         }
         /// <summary>
@@ -57,7 +57,11 @@ namespace SEContactManager.CodeGenApp
         /// <summary>
         /// Gets or sets a value indicating whether the file should be grouped.
         /// </summary>
-        private static bool ToGroupFile { get; set; }
+        private static bool WriteToGroupFile { get; set; }
+        /// <summary>
+        /// Gets or sets a value indicating whether the file should be added info header.
+        /// </summary>
+        private static bool WriteInfoHeader { get; set; }
         /// <summary>
         /// Gets or sets a value indicating whether the empty folders in the source path will be deleted.
         /// </summary>
@@ -85,9 +89,10 @@ namespace SEContactManager.CodeGenApp
             PrintLine($"Solution path:            {SourcePath}");
             PrintLine($"Code generation for:      {GetSolutionName(SourcePath)}");
             PrintLine('-', 80);
-            PrintLine($"Write generated code into:        {(ToGroupFile ? "Group files" : "Single files")}");
+            PrintLine($"Write generated source into:      {(WriteToGroupFile ? "Group files" : "Single files")}");
+            PrintLine($"Write info header into source:    {(WriteInfoHeader ? "Yes" : "No")}");
             PrintLine($"Delete empty folders in the path: {(IncludeCleanDirectory ? "Yes" : "No")}");
-            PrintLine($"Exclude generated files from git: {(ExcludeGeneratedFilesFromGIT ? "Yes" : "No")}");
+            PrintLine($"Exclude generated files from GIT: {(ExcludeGeneratedFilesFromGIT ? "Yes" : "No")}");
             PrintLine();
         }
 
@@ -110,25 +115,31 @@ namespace SEContactManager.CodeGenApp
                 new()
                 {
                     Key = (++mnuIdx).ToString(),
-                    Text = ToLabelText("Group file", "Change group file flag"),
-                    Action = (self) => ToGroupFile = !ToGroupFile
+                    Text = ToLabelText("Generation file", "Change generation file option"),
+                    Action = (self) => WriteToGroupFile = !WriteToGroupFile
                 },
                 new()
                 {
                     Key = (++mnuIdx).ToString(),
-                    Text = ToLabelText("Delete folders", "Change delete empty folders flag"),
+                    Text = ToLabelText("Add info header", "Change add info header option"),
+                    Action = (self) => WriteInfoHeader = !WriteInfoHeader
+                },
+                new()
+                {
+                    Key = (++mnuIdx).ToString(),
+                    Text = ToLabelText("Delete folders", "Change delete empty folders option"),
                     Action = (self) => IncludeCleanDirectory = !IncludeCleanDirectory
                 },
                 new()
                 {
                     Key = (++mnuIdx).ToString(),
-                    Text = ToLabelText("Exclude files", "Change exclude generated files from GIT"),
+                    Text = ToLabelText("Exclude files", "Change the exclusion of generated files from GIT"),
                     Action = (self) => ExcludeGeneratedFilesFromGIT = !ExcludeGeneratedFilesFromGIT
                 },
                 new()
                 {
                     Key = (++mnuIdx).ToString(),
-                    Text =  ToLabelText("Delete files", "Delete generated files"),
+                    Text =  ToLabelText("Delete files", "Delete all generated files"),
                     Action = (self) => DeleteGeneratedFiles(),
                 },
                 new()
@@ -140,7 +151,7 @@ namespace SEContactManager.CodeGenApp
                 new()
                 {
                     Key = (++mnuIdx).ToString(),
-                    Text =  ToLabelText("Start", "Start code generation"),
+                    Text =  ToLabelText("Start", "Start of source code generation"),
                     Action = (self) => StartCodeGeneration(),
                 },
             };
@@ -191,13 +202,38 @@ namespace SEContactManager.CodeGenApp
         /// </summary>
         private void StartCodeGeneration()
         {
+            var invalidEntities = 0;
             var logicAssemblyTypes = Logic.Modules.CodeGenerator.AssemblyAccess.AllTypes;
             var solutionProperties = SolutionProperties.Create(SourcePath, logicAssemblyTypes);
             IEnumerable<IGeneratedItem>? generatedItems;
 
             PrintHeader();
+            CanProgressBarPrint = false;
             StartProgressBar();
             PrintLine("Generate code...");
+
+            Console.WriteLine("Check entity types...");
+            foreach (var item in Logic.Modules.CodeGenerator.AssemblyAccess.EntityTypes)
+            {
+                if (Generator.IsEntity(item) == false && Generator.IsView(item) == false)
+                {
+                    var saveColor = Console.ForegroundColor;
+
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($" + Invalid entity type: {item.Name} - this type is not an entity or a view type!");
+                    Console.ForegroundColor = saveColor;
+                    invalidEntities++;
+                }
+            }
+
+            if (invalidEntities > 0)
+            {
+                Console.WriteLine("Press any key to continue...");
+                Console.ReadKey();
+                Console.WriteLine();
+            }
+
+            CanProgressBarPrint = true;
             Console.WriteLine("Create code items...");
             generatedItems = Generator.Generate(solutionProperties);
 
@@ -209,7 +245,8 @@ namespace SEContactManager.CodeGenApp
                 Generator.CleanDirectories(SourcePath);
             }
             Console.WriteLine("Write code items to files...");
-            Writer.WriteToGroupFile = ToGroupFile;
+            Writer.WriteToGroupFile = WriteToGroupFile;
+            Writer.WriteInfoHeader = WriteInfoHeader;
             Writer.WriteAll(SourcePath, solutionProperties, generatedItems);
             if (ExcludeGeneratedFilesFromGIT)
             {
@@ -221,6 +258,7 @@ namespace SEContactManager.CodeGenApp
                 Console.WriteLine("Remove all generated files from gitignore...");
                 GitIgnoreManager.DeleteIgnoreEntries(SourcePath);
             }
+
             StopProgressBar();
             Thread.Sleep(700);
         }
@@ -232,10 +270,9 @@ namespace SEContactManager.CodeGenApp
         private static string GetSolutionName(string solutionPath)
         {
             var fileInfo = new DirectoryInfo(solutionPath).GetFiles().SingleOrDefault(f => f.Extension.Equals(".sln", StringComparison.CurrentCultureIgnoreCase));
-            
+
             return fileInfo != null ? Path.GetFileNameWithoutExtension(fileInfo.Name) : string.Empty;
         }
         #endregion app methods
     }
 }
-//MdEnd

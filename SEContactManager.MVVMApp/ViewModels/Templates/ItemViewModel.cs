@@ -1,6 +1,4 @@
 ﻿//@CodeCopy
-
-//@BaseCode
 using SEContactManager.MVVMApp.Models.Templates;
 
 namespace SEContactManager.MVVMApp.ViewModels.Templates

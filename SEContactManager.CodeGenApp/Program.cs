@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 using TemplateTools.Logic;
 using TemplateTools.Logic.Contracts;
 using TemplateTools.Logic.Git;
@@ -21,17 +21,16 @@ namespace SEContactManager.CodeGenApp
         static Program()
         {
             ClassConstructing();
-            ToGroupFile = false;
+            WriteToGroupFile = false;
+            WriteInfoHeader = true;
             IncludeCleanDirectory = true;
             ExcludeGeneratedFilesFromGIT = true;
-            HomePath = (Environment.OSVersion.Platform == PlatformID.Unix ||
-            Environment.OSVersion.Platform == PlatformID.MacOSX)
-            ? Environment.GetEnvironmentVariable("HOME")
-            : Environment.ExpandEnvironmentVariables("%HOMEDRIVE%%HOMEPATH%");
+            HomePath = (Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX) 
+                                                                           ? Environment.GetEnvironmentVariable("HOME")
+                                                                           : Environment.ExpandEnvironmentVariables("%HOMEDRIVE%%HOMEPATH%");
             
             UserPath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             SourcePath = GetCurrentSolutionPath();
-            TargetPaths = [];
             ClassConstructed();
         }
         /// <summary>
@@ -50,7 +49,11 @@ namespace SEContactManager.CodeGenApp
         /// <summary>
         /// Gets or sets a value indicating whether the file should be grouped.
         /// </summary>
-        private static bool ToGroupFile { get; set; }
+        private static bool WriteToGroupFile { get; set; }
+        /// <summary>
+        /// Gets or sets a value indicating whether the file should be added the info text.
+        /// </summary>
+        private static bool WriteInfoHeader { get; set; } = true;
         /// <summary>
         /// Gets or sets a value indicating whether the empty folders in the source path will be deleted.
         /// </summary>
@@ -72,14 +75,6 @@ namespace SEContactManager.CodeGenApp
         /// </summary>
         /// <value>The source path.</value>
         private static string SourcePath { get; set; }
-        /// <summary>
-        /// Gets or sets the target paths for the property.
-        /// </summary>
-        private static string[] TargetPaths { get; set; }
-        /// <summary>
-        /// Gets an array of search patterns for source files.
-        /// </summary>
-        private static string[] SearchPatterns => StaticLiterals.SourceFileExtensions.Split('|');
         #endregion Properties
         
         /// <summary>
@@ -113,13 +108,17 @@ namespace SEContactManager.CodeGenApp
         {
             if (command == "1")
             {
-                ToGroupFile = !ToGroupFile;
+                WriteToGroupFile = !WriteToGroupFile;
             }
             else if (command == "2")
             {
-                IncludeCleanDirectory = !IncludeCleanDirectory;
+                WriteInfoHeader = !WriteInfoHeader;
             }
             else if (command == "3")
+            {
+                IncludeCleanDirectory = !IncludeCleanDirectory;
+            }
+            else if (command == "4")
             {
                 ProgressBar.Start();
                 ExcludeGeneratedFilesFromGIT = !ExcludeGeneratedFilesFromGIT;
@@ -134,7 +133,7 @@ namespace SEContactManager.CodeGenApp
                     GitIgnoreManager.DeleteIgnoreEntries(SourcePath);
                 }
             }
-            else if (command == "4")    // delete generated files
+            else if (command == "5")    // delete generated files
             {
                 ProgressBar.Start();
                 Console.WriteLine("Delete all generated files...");
@@ -147,13 +146,13 @@ namespace SEContactManager.CodeGenApp
                 Console.WriteLine("Delete all generated files ignored from git...");
                 GitIgnoreManager.DeleteIgnoreEntries(SourcePath);
             }
-            else if (command == "5")    // delete empty folders
+            else if (command == "6")    // delete empty folders
             {
                 ProgressBar.Start();
                 Console.WriteLine("Delete all empty folders...");
                 Generator.CleanDirectories(SourcePath);
             }
-            else if (command == "6")    // start code generation
+            else if (command == "7")    // start code generation
             {
                 var logicAssemblyTypes = Logic.Modules.CodeGenerator.AssemblyAccess.AllTypes;
                 var solutionProperties = SolutionProperties.Create(SourcePath, logicAssemblyTypes);
@@ -171,7 +170,8 @@ namespace SEContactManager.CodeGenApp
                     Generator.CleanDirectories(SourcePath);
                 }
                 Console.WriteLine("Write code items to files...");
-                Writer.WriteToGroupFile = ToGroupFile;
+                Writer.WriteToGroupFile = WriteToGroupFile;
+                Writer.WriteInfoHeader = WriteInfoHeader;
                 Writer.WriteAll(SourcePath, solutionProperties, generatedItems);
                 if (ExcludeGeneratedFilesFromGIT)
                 {
@@ -220,4 +220,4 @@ namespace SEContactManager.CodeGenApp
         #endregion Partial methods
     }
 }
-//MdEnd
+

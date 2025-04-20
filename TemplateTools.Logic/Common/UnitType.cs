@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace TemplateTools.Logic.Common
 {
     [Flags]
@@ -22,4 +22,3 @@ namespace TemplateTools.Logic.Common
         TemplateTool,
     }
 }
-//MdEnd

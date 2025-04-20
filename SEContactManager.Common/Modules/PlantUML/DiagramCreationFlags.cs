@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 namespace SEContactManager.Common.Modules.PlantUML
 {
     public enum DiagramCreationFlags
@@ -20,4 +20,4 @@ namespace SEContactManager.Common.Modules.PlantUML
         All = EnumMembers | ClassMembers | InterfaceMembers | TypeExtends | InterfaceExtends | ImplementedInterfaces | ClassRelations | InterfaceRelations,
     }
 }
-//MdEnd
+

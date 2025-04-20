@@ -1,5 +1,5 @@
 ﻿//@CodeCopy
-//MdStart
+
 
 namespace SEContactManager.Common.Modules.PlantUML
 {
@@ -694,4 +694,4 @@ namespace SEContactManager.Common.Modules.PlantUML
         #endregion helpers
     }
 }
-//MdEnd
+

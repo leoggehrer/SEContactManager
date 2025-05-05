@@ -129,8 +129,16 @@ namespace TemplateTools.ConApp.Apps
                 new()
                 {
                     Key = (++mnuIdx).ToString(),
-                    Text = ToLabelText("Path", "Change the source solution path"),
-                    Action = (self) => CodeSolutionPath = ChangeTemplateSolutionPath(CodeSolutionPath, MaxSubPathDepth, ReposPath),
+                    Text = ToLabelText("Source path", "Change the source solution path"),
+                    Action = (self) => 
+                    {
+                        var result = ChangeTemplateSolutionPath(CodeSolutionPath, MaxSubPathDepth, ReposPath);
+
+                        if (result.HasContent())
+                        {
+                            CodeSolutionPath = result;
+                        }
+                    }
                 },
                 new()
                 {
@@ -175,7 +183,7 @@ namespace TemplateTools.ConApp.Apps
             [
                 new("Solution path:", CodeSolutionPath),
                 new(new string('-', 33), ""),
-                new("Write generated source into:", WriteToGroupFile),
+                new("Write generated source into:", WriteToGroupFile ? "Group files" : "Single files"),
                 new("Write info header into source:", WriteInfoHeader),
                 new("Delete empty folders in the path:", IncludeCleanDirectory),
                 new("Exclude generated files from GIT:", ExcludeGeneratedFilesFromGIT),

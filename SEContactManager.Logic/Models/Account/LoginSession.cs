@@ -57,7 +57,7 @@ namespace SEContactManager.Logic.Models.Account
                 Name = entity.Name,
                 Email = entity.Email,
                 OptionalInfo = entity.OptionalInfo,
-                Roles = entity.Roles.Select(Role.CloneFrom).ToArray()
+                Roles = [.. entity.Roles.Select(Role.CloneFrom)]
             };
         }
     }

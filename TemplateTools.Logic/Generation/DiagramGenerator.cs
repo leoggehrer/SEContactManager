@@ -24,10 +24,7 @@ namespace TemplateTools.Logic.Generation
         /// The ItemProperties for the current instance.
         /// </value>
         internal ItemProperties ItemProperties => _itemProperties ??= new ItemProperties(SolutionProperties.SolutionName, StaticLiterals.LogicExtension);
-
         #endregion properties
-        #region constructors
-        #endregion constructors
 
         /// <summary>
         /// Generates entity diagrams for all entity types in the entity project.
@@ -41,7 +38,7 @@ namespace TemplateTools.Logic.Generation
             var entityProject = EntityProject.Create(SolutionProperties);
 
             // Create entity type diagrams
-            foreach (var type in entityProject.EntityTypes)
+            foreach (var type in entityProject.AllEntityTypes)
             {
                 result.Add(GenerateClassDiagram(type, UnitType.Logic, ItemType.EntityClassDiagram));
             }

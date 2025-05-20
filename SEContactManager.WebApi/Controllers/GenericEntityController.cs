@@ -1,11 +1,10 @@
 ﻿//@CodeCopy
-using SEContactManager.Logic.Contracts;
-using SEContactManager.WebApi.Contracts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using SEContactManager.Logic.Contracts;
+using SEContactManager.WebApi.Contracts;
 using System.Linq.Dynamic.Core;
 using System.Linq.Dynamic.Core.Exceptions;
-using Microsoft.AspNetCore.Mvc.ApplicationModels;
 
 namespace SEContactManager.WebApi.Controllers
 {

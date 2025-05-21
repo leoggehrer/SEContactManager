@@ -33,7 +33,7 @@ namespace TemplateTools.Logic.Generation
         /// Gets or sets a value indicating whether services should be generated.
         ///</summary>
         public bool GenerateServices { get; set; }
-        
+
         #region AngularApp-Definitions
         public static string SourcePath => Path.Combine("src", "app");
         /// <summary>
@@ -222,9 +222,28 @@ namespace TemplateTools.Logic.Generation
         /// <returns>The generated TypeScript model.</returns>
         public IGeneratedItem CreateModelFromType(Type type, IEnumerable<Type> types)
         {
+            static string GetBaseClassByType(Type type)
+            {
+                var result = "object";
+                var found = false;
+                var runType = type.BaseType;
+
+                while (runType != null && found == false)
+                {
+                    if (StaticLiterals.AngularBaseClassMapping.TryGetValue(runType.Name, out string? value))
+                    {
+                        found = true;
+                        result = value;
+                    }
+                    runType = runType.BaseType;
+                }
+                return result;
+            }
+
             var subPath = ConvertFileItem(ItemProperties.CreateSubPathFromType(type));
             var projectPath = Path.Combine(SolutionProperties.SolutionPath, SolutionProperties.AngularAppProjectName);
             var modelName = ItemProperties.CreateTSModelName(type);
+            var modelBaseType = GetBaseClassByType(type);
             var fileName = $"{ConvertFileItem(modelName)}{StaticLiterals.TSFileExtension}";
             var typeProperties = type.GetAllPropertyInfos();
             var declarationTypeName = string.Empty;
@@ -236,7 +255,7 @@ namespace TemplateTools.Logic.Generation
             };
 
             StartCreateModel(type, result.Source);
-            result.Add($"export interface {modelName} extends IVersionEntity" + " {");
+            result.Add($"export interface {modelName} extends {modelBaseType}" + " {");
             
             foreach (var item in typeProperties)
             {
@@ -257,7 +276,7 @@ namespace TemplateTools.Logic.Generation
             var imports = new List<string>();
 #pragma warning restore IDE0028 // Simplify collection initialization
             
-            imports.Add("import { IVersionEntity } from '@app-models/i-version-entity';");
+            imports.Add("import { " + $"{modelBaseType}" + " } from '@app-models/" + $"{ConvertFileItem(modelBaseType)}';");
             imports.AddRange(CreateTypeImports(type, types));
             imports.AddRange(CreateModelToModelImports(type, types));
             imports.Add(StaticLiterals.CustomImportBeginLabel);
@@ -287,7 +306,8 @@ namespace TemplateTools.Logic.Generation
         /// This method is partially implemented and needs to be completed in another class file.
         /// </remarks>
         partial void FinishCreateModel(Type type, List<string> lines);
-        
+
+
         /// <summary>
         /// Creates a collection of generated items representing services.
         /// </summary>
@@ -302,6 +322,13 @@ namespace TemplateTools.Logic.Generation
                 if (CanCreate(type) && QuerySetting<bool>(Common.ItemType.TypeScriptService, type, StaticLiterals.Generate, GenerateServices.ToString()))
                 {
                     result.Add(CreateEntityServiceFromType(type, Common.UnitType.AngularApp, Common.ItemType.TypeScriptService));
+                }
+            }
+            foreach (var type in entityProject.AllViewTypes)
+            {
+                if (CanCreate(type) && QuerySetting<bool>(Common.ItemType.TypeScriptService, type, StaticLiterals.Generate, GenerateServices.ToString()))
+                {
+                    result.Add(CreateViewServiceFromType(type, Common.UnitType.AngularApp, Common.ItemType.TypeScriptService));
                 }
             }
             return result;
@@ -330,7 +357,7 @@ namespace TemplateTools.Logic.Generation
             StartCreateService(type, result.Source);
             result.Add("import { Injectable } from '@angular/core';");
             result.Add("import { HttpClient } from '@angular/common/http';");
-            result.Add("import { ApiBaseService } from '@app-services/api-base.service';");
+            result.Add("import { ApiEntityBaseService } from '@app-services/api-entity-base.service';");
             result.Add("import { environment } from '@environment/environment';");
             result.Add(CreateImport("@app-models", modelName, subPath));
             
@@ -341,7 +368,7 @@ namespace TemplateTools.Logic.Generation
             result.Add("@Injectable({");
             result.Add("  providedIn: 'root',");
             result.Add("})");
-            result.Add($"export class {entityName}Service extends ApiBaseService<{modelName}>" + " {");
+            result.Add($"export class {entityName}Service extends ApiEntityBaseService<{modelName}>" + " {");
             result.Add("  constructor(public override http: HttpClient) {");
             result.Add($"    super(http, environment.API_BASE_URL + '/{entityName.CreatePluralWord().ToLower()}');");
             result.Add("  }");
@@ -353,6 +380,55 @@ namespace TemplateTools.Logic.Generation
             FinishCreateService(type, result.Source);
             return result;
         }
+
+        /// <summary>
+        /// Creates a service from the specified type.
+        /// </summary>
+        /// <param name="type">The type from which the service is created.</param>
+        /// <param name="unitType">The unit type.</param>
+        /// <param name="itemType">The item type.</param>
+        /// <returns>The generated item representing the service.</returns>
+        private Models.GeneratedItem CreateViewServiceFromType(Type type, Common.UnitType unitType, Common.ItemType itemType)
+        {
+            var subPath = ConvertFileItem(ItemProperties.CreateSubPathFromType(type));
+            var projectPath = Path.Combine(SolutionProperties.SolutionPath, SolutionProperties.AngularAppProjectName);
+            var entityName = ItemProperties.CreateEntityName(type);
+            var modelName = ItemProperties.CreateTSModelName(type);
+            var fileName = $"{ConvertFileItem($"{entityName}Service")}{StaticLiterals.TSFileExtension}";
+            var result = new Models.GeneratedItem(unitType, itemType)
+            {
+                FullName = CreateTypeScriptFullName(type),
+                FileExtension = StaticLiterals.TSFileExtension,
+                SubFilePath = Path.Combine(ServicesSubFolder, subPath, fileName),
+            };
+
+            StartCreateService(type, result.Source);
+            result.Add("import { Injectable } from '@angular/core';");
+            result.Add("import { HttpClient } from '@angular/common/http';");
+            result.Add("import { ApiViewBaseService } from '@app-services/api-view-base.service';");
+            result.Add("import { environment } from '@environment/environment';");
+            result.Add(CreateImport("@app-models", modelName, subPath));
+
+            result.Add(StaticLiterals.CustomImportBeginLabel);
+            result.AddRange(ReadCustomImports(projectPath, result));
+            result.Add(StaticLiterals.CustomImportEndLabel);
+
+            result.Add("@Injectable({");
+            result.Add("  providedIn: 'root',");
+            result.Add("})");
+            result.Add($"export class {entityName}Service extends ApiViewBaseService<{modelName}>" + " {");
+            result.Add("  constructor(public override http: HttpClient) {");
+            result.Add($"    super(http, environment.API_BASE_URL + '/{entityName.CreatePluralWord().ToLower()}');");
+            result.Add("  }");
+            result.Add("}");
+
+            result.Source.Insert(result.Source.Count - 1, StaticLiterals.CustomCodeBeginLabel);
+            result.Source.InsertRange(result.Source.Count - 1, ReadCustomCode(projectPath, result));
+            result.Source.Insert(result.Source.Count - 1, StaticLiterals.CustomCodeEndLabel);
+            FinishCreateService(type, result.Source);
+            return result;
+        }
+
         /// <summary>
         /// Starts the process of creating a service of the specified type, using the given list of lines.
         /// </summary>
@@ -365,62 +441,7 @@ namespace TemplateTools.Logic.Generation
         /// <param name="type">The Type object representing the type of the service.</param>
         /// <param name="lines">A List of strings containing the lines of the service.</param>
         partial void FinishCreateService(Type type, List<string> lines);
-        
-        /// <summary>
-        /// Queries a setting value of type <typeparamref name="T"/> from a specific item type, using the specified value name and default value.
-        /// </summary>
-        /// <typeparam name="T">The type of the setting value to be queried.</typeparam>
-        /// <param name="itemType">The itemType of the setting.</param>
-        /// <param name="type">The type of the setting.</param>
-        /// <param name="valueName">The name of the setting value to be queried.</param>
-        /// <param name="defaultValue">The default value to be used if the queried setting value is not found or cannot be converted to type <typeparamref name="T"/>.</param>
-        /// <returns>The queried setting value of type <typeparamref name="T"/> or the default value if the queried setting value is not found or cannot be converted to type <typeparamref name="T"/>.</returns>
-        private T QuerySetting<T>(Common.ItemType itemType, Type type, string valueName, string defaultValue)
-        {
-            T result;
-            
-            try
-            {
-                result = (T)Convert.ChangeType(QueryGenerationSettingValue(Common.UnitType.AngularApp, itemType, ItemProperties.CreateSubTypeFromEntity(type), valueName, defaultValue), typeof(T));
-            }
-            catch (Exception ex)
-            {
-                result = (T)Convert.ChangeType(defaultValue, typeof(T));
-                System.Diagnostics.Debug.WriteLine($"Error in {System.Reflection.MethodBase.GetCurrentMethod()!.Name}: {ex.Message}");
-            }
-            return result;
-        }
-        /// <summary>
-        ///   Queries a setting value and converts it to the specified type.
-        /// </summary>
-        /// <typeparam name="T">The type to which the setting value will be converted.</typeparam>
-        /// <param name="itemType">The type of item for which the setting is being queried.</param>
-        /// <param name="itemName">The name of the item for which the setting is being queried.</param>
-        /// <param name="valueName">The name of the setting being queried.</param>
-        /// <param name="defaultValue">The default value to be used if the setting value cannot be queried or converted.</param>
-        /// <returns>
-        ///   The queried setting value converted to the specified type, or the default value if an error occurs.
-        /// </returns>
-        /// <remarks>
-        ///   If querying or converting the setting value throws an exception, the default value will be used
-        ///   and an error message will be written to the debug output.
-        /// </remarks>
-        private T QuerySetting<T>(Common.ItemType itemType, string itemName, string valueName, string defaultValue)
-        {
-            T result;
-            
-            try
-            {
-                result = (T)Convert.ChangeType(QueryGenerationSettingValue(Common.UnitType.AngularApp, itemType, itemName, valueName, defaultValue), typeof(T));
-            }
-            catch (Exception ex)
-            {
-                result = (T)Convert.ChangeType(defaultValue, typeof(T));
-                System.Diagnostics.Debug.WriteLine($"Error in {System.Reflection.MethodBase.GetCurrentMethod()!.Name}: {ex.Message}");
-            }
-            return result;
-        }
-        
+
         #region Helpers
         /// <summary>
         /// Reads the custom imports from a source file and returns them as a sequence of strings.
@@ -688,6 +709,61 @@ namespace TemplateTools.Logic.Generation
                 }
             }
             return result.Distinct();
+        }
+
+        /// <summary>
+        /// Queries a setting value of type <typeparamref name="T"/> from a specific item type, using the specified value name and default value.
+        /// </summary>
+        /// <typeparam name="T">The type of the setting value to be queried.</typeparam>
+        /// <param name="itemType">The itemType of the setting.</param>
+        /// <param name="type">The type of the setting.</param>
+        /// <param name="valueName">The name of the setting value to be queried.</param>
+        /// <param name="defaultValue">The default value to be used if the queried setting value is not found or cannot be converted to type <typeparamref name="T"/>.</param>
+        /// <returns>The queried setting value of type <typeparamref name="T"/> or the default value if the queried setting value is not found or cannot be converted to type <typeparamref name="T"/>.</returns>
+        private T QuerySetting<T>(Common.ItemType itemType, Type type, string valueName, string defaultValue)
+        {
+            T result;
+
+            try
+            {
+                result = (T)Convert.ChangeType(QueryGenerationSettingValue(Common.UnitType.AngularApp, itemType, ItemProperties.CreateSubTypeFromEntity(type), valueName, defaultValue), typeof(T));
+            }
+            catch (Exception ex)
+            {
+                result = (T)Convert.ChangeType(defaultValue, typeof(T));
+                System.Diagnostics.Debug.WriteLine($"Error in {System.Reflection.MethodBase.GetCurrentMethod()!.Name}: {ex.Message}");
+            }
+            return result;
+        }
+        /// <summary>
+        ///   Queries a setting value and converts it to the specified type.
+        /// </summary>
+        /// <typeparam name="T">The type to which the setting value will be converted.</typeparam>
+        /// <param name="itemType">The type of item for which the setting is being queried.</param>
+        /// <param name="itemName">The name of the item for which the setting is being queried.</param>
+        /// <param name="valueName">The name of the setting being queried.</param>
+        /// <param name="defaultValue">The default value to be used if the setting value cannot be queried or converted.</param>
+        /// <returns>
+        ///   The queried setting value converted to the specified type, or the default value if an error occurs.
+        /// </returns>
+        /// <remarks>
+        ///   If querying or converting the setting value throws an exception, the default value will be used
+        ///   and an error message will be written to the debug output.
+        /// </remarks>
+        private T QuerySetting<T>(Common.ItemType itemType, string itemName, string valueName, string defaultValue)
+        {
+            T result;
+
+            try
+            {
+                result = (T)Convert.ChangeType(QueryGenerationSettingValue(Common.UnitType.AngularApp, itemType, itemName, valueName, defaultValue), typeof(T));
+            }
+            catch (Exception ex)
+            {
+                result = (T)Convert.ChangeType(defaultValue, typeof(T));
+                System.Diagnostics.Debug.WriteLine($"Error in {System.Reflection.MethodBase.GetCurrentMethod()!.Name}: {ex.Message}");
+            }
+            return result;
         }
         #endregion Helpers
     }

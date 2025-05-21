@@ -1,6 +1,6 @@
 ﻿//@CodeCopy
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { IKey } from '@app/models/i-key';
+import { Directive, EventEmitter, Input, Output } from '@angular/core';
+import { IKeyModel } from '@app/models/i-key-model';
 import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
 
 /**
@@ -9,12 +9,8 @@ import { NgbActiveModal } from '@ng-bootstrap/ng-bootstrap';
  * 
  * @template T - A type that extends the IKey interface.
  */
-@Component({
-  selector: 'app-generic-edit',
-  templateUrl: './generic-edit.component.html',
-  styleUrl: './generic-edit.component.css'
-})
-export class GenericEditComponent<T extends IKey> {
+@Directive()
+export abstract class GenericEditComponent<T extends IKeyModel> {
   /**
    * The data item being edited or added.
    */
@@ -35,7 +31,7 @@ export class GenericEditComponent<T extends IKey> {
    * 
    * @param activeModal - The active modal instance from NgbActiveModal.
    */
-  constructor(public activeModal: NgbActiveModal) {}
+  constructor(public activeModal: NgbActiveModal) { }
 
   /**
    * Gets the title of the modal based on the data item's ID.

@@ -94,6 +94,9 @@ namespace TemplateTools.ConApp.Modules
             var isSolutionTargetPath = isProjectTargetPath == false && targetPath == TemplatePath.GetDirectoryFromPath(targetPath, ".sln");
             var isSolutionTargetSubPath = isSolutionTargetPath == false && TemplatePath.IsSolutionPath(targetPath);
             var sourcePath = Path.GetDirectoryName(sourceFilePath) ?? string.Empty;
+
+            var sourceSN = TemplatePath.GetSolutionName(sourcePath); 
+
             var sourceSolutionFilePath = TemplatePath.FindSolutionFilePath(sourcePath);
             var sourceSolutionName = Path.GetFileNameWithoutExtension(sourceSolutionFilePath);
             var targetSolutionFilePath = TemplatePath.FindSolutionFilePath(targetPath);
@@ -135,6 +138,12 @@ namespace TemplateTools.ConApp.Modules
                     canCopy = false;
                 }
             }
+            else if (TemplatePath.IsAngularPath(targetPath) && TemplatePath.IsAngularFilePath(sourceFilePath))
+            {
+                var sourceSubFilePath = TemplatePath.GetProjectSubFilePath(sourceFilePath, ".esproj");
+
+                targetFilePath = Path.Combine(targetPath, sourceSubFilePath);
+            }
             else if (TemplatePath.IsSolutionFilePath(sourceFilePath))
             {
                 if (isProjectTargetPath)
@@ -161,9 +170,9 @@ namespace TemplateTools.ConApp.Modules
             else
             {
                 var fileName = Path.GetFileName(sourceFilePath);
-                
+
                 targetFilePath = Path.Combine(targetPath, fileName);
-                
+
                 if (Directory.Exists(targetPath) == false)
                 {
                     Directory.CreateDirectory(targetPath);
